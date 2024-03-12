@@ -6,28 +6,33 @@ public class bplustree {
 	int m;
 	InternalNode root;
 	LeafNode firstLeaf;
+//	min w el max
+//	search upperbound key retrun search(min,key)
+	Comparable min;
+	Comparable max;
 
 	/*~~~~~~~~~~~~~~~~ HELPER FUNCTIONS ~~~~~~~~~~~~~~~~*/
 
 	/**
 	 * This method performs a standard binary search on a sorted
 	 * DictionaryPair[] and returns the index of the dictionary pair
-	 * with target key t if found. Otherwise, this method returns a negative
+	 * with target key t if found. Otherwise, this method returns a negative++
 	 * value.
 	 * @param dps: list of dictionary pairs sorted by key within leaf node
 	 * @param t: target key value of dictionary pair being searched for
 	 * @return index of the target value if found, else a negative value
 	 */
-	private int binarySearch(DictionaryPair[] dps, int numPairs, int t) {
+	private int binarySearch(DictionaryPair[] dps, int numPairs, Comparable t) {
 		Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
 			@Override
 			public int compare(DictionaryPair o1, DictionaryPair o2) {
-				Integer a = Integer.valueOf(o1.key);
-				Integer b = Integer.valueOf(o2.key);
-				return a.compareTo(b);
+//				Integer a = Integer.valueOf(o1.key);
+//				Integer b = Integer.valueOf(o2.key);
+//				return a.compareTo(b);
+				return o1.compareTo(o2);
 			}
 		};
-		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, 0), c);
+		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, new HashSet<String>()), c);
 	}
 
 	/**
@@ -37,15 +42,16 @@ public class bplustree {
 	 * @param key: the unique key that lies within the dictionary of a LeafNode object
 	 * @return the LeafNode object that contains the key within its dictionary
 	 */
-	private LeafNode findLeafNode(int key) {
+	private LeafNode findLeafNode(Comparable key) {
 
 		// Initialize keys and index variable
-		Integer[] keys = this.root.keys;
+		Comparable[] keys = this.root.keys;
 		int i;
 
 		// Find next node on path to appropriate leaf node
 		for (i = 0; i < this.root.degree - 1; i++) {
-			if (key < keys[i]) { break; }
+//			if (key < keys[i]) { break; }
+			if (key.compareTo(keys[i])<=-1) { break; }
 		}
 
 		/* Return node if it is a LeafNode object,
@@ -58,15 +64,16 @@ public class bplustree {
 		}
 	}
 
-	private LeafNode findLeafNode(InternalNode node, int key) {
+	private LeafNode findLeafNode(InternalNode node, Comparable key) {
 
 		// Initialize keys and index variable
-		Integer[] keys = node.keys;
+		Comparable[] keys = node.keys;
 		int i;
 
 		// Find next node on path to appropriate leaf node
 		for (i = 0; i < node.degree - 1; i++) {
-			if (key < keys[i]) { break; }
+//			if (key < keys[i]) { break; }
+			if(key.compareTo(keys[i])<=-1){ break;}
 		}
 
 		/* Return node if it is a LeafNode object,
@@ -135,7 +142,7 @@ public class bplustree {
 			sibling = in.rightSibling;
 
 			// Copy 1 key and pointer from sibling (atm just 1 key)
-			int borrowedKey = sibling.keys[0];
+			Comparable borrowedKey = sibling.keys[0];
 			Node pointer = sibling.childPointers[0];
 
 			// Copy root key and pointer into parent
@@ -320,8 +327,8 @@ public class bplustree {
 
 		// Split keys and pointers in half
 		int midpoint = getMidpoint();
-		int newParentKey = in.keys[midpoint];
-		Integer[] halfKeys = splitKeys(in.keys, midpoint);
+		Comparable newParentKey = in.keys[midpoint];
+		Comparable[] halfKeys = splitKeys(in.keys, midpoint);
 		Node[] halfPointers = splitChildPointers(in, midpoint);
 
 		// Change degree of original InternalNode in
@@ -344,7 +351,7 @@ public class bplustree {
 		if (parent == null) {
 
 			// Create new root node and add midpoint key and pointers
-			Integer[] keys = new Integer[this.m];
+			Comparable[] keys = new Comparable[this.m];
 			keys[0] = newParentKey;
 			InternalNode newRoot = new InternalNode(this.m, keys);
 			newRoot.appendChildPointer(in);
@@ -376,9 +383,9 @@ public class bplustree {
 	 * @param split: the index where the split is to occur
 	 * @return Integer[] of removed keys
 	 */
-	private Integer[] splitKeys(Integer[] keys, int split) {
+	private Comparable[] splitKeys(Comparable[] keys, int split) {
 
-		Integer[] halfKeys = new Integer[this.m];
+		Comparable[] halfKeys = new Comparable[this.m];
 
 		// Remove split-indexed value from keys
 		keys[split] = null;
@@ -400,7 +407,7 @@ public class bplustree {
 	 * @param key: an integer key that corresponds with an existing dictionary
 	 *             pair
 	 */
-	public void delete(int key) {
+	public void delete(Comparable key) {
 		if (isEmpty()) {
 
 			/* Flow of execution goes here when B+ tree has no dictionary pairs */
@@ -447,7 +454,10 @@ public class bplustree {
 
 						// Update key in parent if necessary
 						int pointerIndex = findIndexOfPointer(parent.childPointers, ln);
-						if (!(borrowedDP.key >= parent.keys[pointerIndex - 1])) {
+//						if (!(borrowedDP.key >= parent.keys[pointerIndex - 1])) {
+//							parent.keys[pointerIndex - 1] = ln.dictionary[0].key;
+//						}
+						if (!(borrowedDP.key.compareTo(parent.keys[pointerIndex - 1])>=0)) {
 							parent.keys[pointerIndex - 1] = ln.dictionary[0].key;
 						}
 
@@ -466,8 +476,11 @@ public class bplustree {
 
 						// Update key in parent if necessary
 						int pointerIndex = findIndexOfPointer(parent.childPointers, ln);
-						if (!(borrowedDP.key < parent.keys[pointerIndex])) {
-							parent.keys[pointerIndex] = sibling.dictionary[0].key;
+//						if (!(borrowedDP.key < parent.keys[pointerIndex])) {
+//							parent.keys[pointerIndex] = sibling.dictionary[0].key;
+//						}
+						if ((borrowedDP.key.compareTo(parent.keys[pointerIndex - 1])>=0)) {
+							parent.keys[pointerIndex - 1] = ln.dictionary[0].key;
 						}
 
 					}
@@ -539,28 +552,45 @@ public class bplustree {
 	 * @param key: an integer key to be used in the dictionary pair
 	 * @param value: a floating point number to be used in the dictionary pair
 	 */
-	public void insert(int key, double value){
-		if (isEmpty()) {
+	public void insert(Comparable key, String value){
 
+
+		if (isEmpty()) {
+			max = key;
+			min = key;
 			/* Flow of execution goes here only when first insert takes place */
 
 			// Create leaf node as first node in B plus tree (root is null)
-			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key, value));
+			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key, new HashSet<String>(){{
+																					add(value);
+			}}));
 
 			// Set as first leaf node (can be used later for in-order leaf traversal)
 			this.firstLeaf = ln;
 
 		} else {
-
+			if(key.compareTo(max)>0)
+				max=key;
+			if(key.compareTo(min)<0)
+				min=key;
+			HashSet<String> temp = this.search(key);
+			if(temp!=null) {
+				temp.add(value);
+				return;
+			}
 			// Find leaf node to insert into
 			LeafNode ln = (this.root == null) ? this.firstLeaf :
 												findLeafNode(key);
 
 			// Insert into leaf node fails if node becomes overfull
-			if (!ln.insert(new DictionaryPair(key, value))) {
+			if (!ln.insert(new DictionaryPair(key, new HashSet<String>(){{
+				add(value);
+			}}))) {
 
 				// Sort all the dictionary pairs with the included pair to be inserted
-				ln.dictionary[ln.numPairs] = new DictionaryPair(key, value);
+				ln.dictionary[ln.numPairs] = new DictionaryPair(key, new HashSet<String>(){{
+					add(value);
+				}});
 				ln.numPairs++;
 				sortDictionary(ln.dictionary);
 
@@ -573,7 +603,7 @@ public class bplustree {
 					/* Flow of execution goes here when there is 1 node in tree */
 
 					// Create internal node to serve as parent, use dictionary midpoint key
-					Integer[] parent_keys = new Integer[this.m];
+					Comparable[] parent_keys = new Comparable[this.m];
 					parent_keys[0] = halfDict[0].key;
 					InternalNode parent = new InternalNode(this.m, parent_keys);
 					ln.parent = parent;
@@ -584,7 +614,7 @@ public class bplustree {
 					/* Flow of execution goes here when parent exists */
 
 					// Add new key to parent for proper indexing
-					int newParentKey = halfDict[0].key;
+					Comparable newParentKey = halfDict[0].key;
 					ln.parent.keys[ln.parent.degree - 1] = newParentKey;
 					Arrays.sort(ln.parent.keys, 0, ln.parent.degree);
 				}
@@ -633,7 +663,7 @@ public class bplustree {
 	 * @param key: the key to be searched within the B+ tree
 	 * @return the floating point value associated with the key within the B+ tree
 	 */
-	public Double search(int key) {
+	public HashSet<String> search(Comparable key) {
 
 		// If B+ tree is completely empty, simply return null
 		if (isEmpty()) { return null; }
@@ -662,10 +692,10 @@ public class bplustree {
 	 * @return an ArrayList<Double> that holds all values of dictionary pairs
 	 * whose keys are within the specified range
 	 */
-	public ArrayList<Double> search(int lowerBound, int upperBound) {
+	public ArrayList<HashSet<String>> search(Comparable lowerBound, Comparable upperBound,boolean lowerBoundInclusive,boolean upperBoundInclusive ) {
 
 		// Instantiate Double array to hold values
-		ArrayList<Double> values = new ArrayList<Double>();
+		ArrayList<HashSet<String>> values = new ArrayList<HashSet<String>>();
 
 		// Iterate through the doubly linked list of leaves
 		LeafNode currNode = this.firstLeaf;
@@ -680,7 +710,12 @@ public class bplustree {
 				if (dp == null) { break; }
 
 				// Include value if its key fits within the provided range
-				if (lowerBound <= dp.key && dp.key <= upperBound) {
+//				if (lowerBound <= dp.key && dp.key <= upperBound) {
+//					values.add(dp.value);
+//				}
+				int lower = (lowerBoundInclusive? 0: -1);
+				int upper = (upperBoundInclusive? 0: -1);
+				if(lowerBound.compareTo(dp.key)<=lower && dp.key.compareTo(upperBound)<=upper){
 					values.add(dp.value);
 				}
 			}
@@ -692,6 +727,13 @@ public class bplustree {
 		}
 
 		return values;
+	}
+	public  ArrayList<HashSet<String>> searchGreaterThan(Comparable lowerBound, boolean inclusive){
+		return search(lowerBound,max,inclusive,true);
+	}
+
+	public  ArrayList<HashSet<String>> searchLessThan(Comparable upperBound, boolean inclusive){
+		return search(min,upperBound,true,inclusive);
 	}
 
 	/**
@@ -722,7 +764,7 @@ public class bplustree {
 		int degree;
 		InternalNode leftSibling;
 		InternalNode rightSibling;
-		Integer[] keys;
+		Comparable[] keys;
 		Node[] childPointers;
 
 		/**
@@ -858,7 +900,7 @@ public class bplustree {
 		 * @param m: the max degree of the InternalNode
 		 * @param keys: the list of keys that InternalNode is initialized with
 		 */
-		private InternalNode(int m, Integer[] keys) {
+		private InternalNode(int m, Comparable[] keys) {
 			this.maxDegree = m;
 			this.minDegree = (int)Math.ceil(m/2.0);
 			this.degree = 0;
@@ -872,7 +914,7 @@ public class bplustree {
 		 * @param keys: the list of keys that InternalNode is initialized with
 		 * @param pointers: the list of pointers that InternalNode is initialized with
 		 */
-		private InternalNode(int m, Integer[] keys, Node[] pointers) {
+		private InternalNode(int m, Comparable[] keys, Node[] pointers) {
 			this.maxDegree = m;
 			this.minDegree = (int)Math.ceil(m/2.0);
 			this.degree = linearNullSearch(pointers);
@@ -1006,15 +1048,15 @@ public class bplustree {
 	 * so that the DictionaryPair objects can be sorted later on.
 	 */
 	public class DictionaryPair implements Comparable<DictionaryPair> {
-		int key;
-		double value;
+		Comparable key;
+		HashSet<String> value;
 
 		/**
 		 * Constructor
 		 * @param key: the key of the key-value pair
 		 * @param value: the value of the key-value pair
 		 */
-		public DictionaryPair(int key, double value) {
+		public DictionaryPair(Comparable key, HashSet<String> value) {
 			this.key = key;
 			this.value = value;
 		}
@@ -1027,8 +1069,13 @@ public class bplustree {
 		 */
 		@Override
 		public int compareTo(DictionaryPair o) {
-			if (key == o.key) { return 0; }
-			else if (key > o.key) { return 1; }
+//			if (key == o.key) { return 0; }
+//			else if (key > o.key) { return 1; }
+//			else { return -1; }
+			int i = this.key.compareTo(o.key);
+//			return i;
+			if (i==0) { return 0; }
+			else if (i>0) { return 1; }
 			else { return -1; }
 		}
 	}
@@ -1036,103 +1083,122 @@ public class bplustree {
 	public static void main(String[] args) {
 
 		// Ensure correct number of arguments
-		if (args.length != 1) {
-			System.err.println("usage: java bplustree <file_name>");
-			System.exit(-1);
-		}
+//		if (args.length != 1) {
+//			System.err.println("usage: java bplustree <file_name>");
+//			System.exit(-1);
+//		}
 
 		// Read from file
-		String fileName = args[0];
+
 		try {
 
-			// Prepare to read input file
-			File file = new File(System.getProperty("user.dir") + "/" + fileName);
-			Scanner sc = new Scanner(file);
-
-			// Create output file in which search results will be stored
-			FileWriter logger = new FileWriter("output_file.txt", false);
-			boolean firstLine = true;
+//			// Prepare to read input file
+//			File file = new File(System.getProperty("user.dir") + "/" + fileName);
+//			Scanner sc = new Scanner(file);
+//
+//			// Create output file in which search results will be stored
+//			FileWriter logger = new FileWriter("output_file.txt", false);
+//			boolean firstLine = true;
 
 			// Create initial B+ tree
-			bplustree bpt = null;
+			bplustree bpt = new bplustree(3);
 
-			// Perform an operation for each line in the input file
-			while (sc.hasNextLine()) {
-				String line = sc.nextLine().replace(" ", "");
-				String[] tokens = line.split("[(,)]");
 
-				switch (tokens[0]) {
+			bpt.insert("0021","0.3534");
+			bpt.insert("0108","31.907");
+			bpt.insert("5608","3.26");
+			bpt.insert("0234","121.56");
+			bpt.insert("4325","-109.23");
+			bpt.delete("0108");
+			bpt.insert("0234","blabizo");
+			HashSet<String> temp = bpt.search("0234");
+			bpt.insert("0102","39.56");
+			bpt.insert("0065","-3.95");
+			bpt.delete("0102");
+			bpt.delete("0021");
+			bpt.insert("0106","-3.91");
+			bpt.insert("0023","3.55");
+//			ArrayList<HashSet<String>> temp2 = bpt.search("0023","0099");
+			bpt.insert("0032","0.02");
+			bpt.insert("0220","3.55");
+			bpt.delete("0234");
+			HashSet<String> temp3=bpt.search("0065");
+			System.out.print("blalf");
 
-					// Initializes an m-order B+ tree
-					case "Initialize":
-						bpt = new bplustree(Integer.parseInt(tokens[1]));
-						break;
+//			// Perform an operation for each line in the input file
+//			while (sc.hasNextLine()) {
+//				String line = sc.nextLine().replace(" ", "");
+//				String[] tokens = line.split("[(,)]");
+//
+//				switch (tokens[0]) {
+//
+//					// Initializes an m-order B+ tree
+//					case "Initialize":
+//						bpt = new bplustree(Integer.parseInt(tokens[1]));
+//						break;
+//
+//					// Insert a dictionary pair into the B+ tree
+//					case "Insert":
+//						bpt.insert(Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]));
+//						break;
+//
+//					// Delete a dictionary pair from the B+ tree
+//					case "Delete":
+//						bpt.delete(Integer.parseInt(tokens[1]));
+//						break;
+//
+//					// Perform a search or search operation on the B+ tree
+//					case "Search":
+//						String result = "";
+//
+//						// Perform search (across a range) operation
+//						if (tokens.length == 3) {
+//							ArrayList<Double> values = bpt.search(
+//											Integer.parseInt(tokens[1]),
+//											Integer.parseInt(tokens[2]));
+//
+//							// Record search result as a String
+//							if (values.size() != 0) {
+//								for (double v : values) { result += v + ", "; }
+//								result = result.substring(0, result.length() - 2);
+//							} else {
+//								result = "Null";
+//							}
+//
+//						}
+//
+//						// Perform search operation
+//						else {
+//
+//							/* Perform search for key, if resulting value is
+//							   null, then the key could not be found */
+//							Double value = bpt.search(Integer.parseInt(tokens[1]));
+//							result = (value == null) ? "Null" :
+//														Double.toString(value);
+//						}
+//
+//						// Output search result in .txt file
+//						if (firstLine) {
+//							logger.write(result);
+//							firstLine = false;
+//						} else {
+//							logger.write("\n" + result);
+//						}
+//						logger.flush();
+//
+//						break;
+//					default:
+//						throw new IllegalArgumentException("\"" + tokens[0] +
+//								"\"" + " is an unacceptable input.");
+//				}
+//			}
+//
+//			// Close output file
+//			logger.close();
 
-					// Insert a dictionary pair into the B+ tree
-					case "Insert":
-						bpt.insert(Integer.parseInt(tokens[1]), Double.parseDouble(tokens[2]));
-						break;
-
-					// Delete a dictionary pair from the B+ tree
-					case "Delete":
-						bpt.delete(Integer.parseInt(tokens[1]));
-						break;
-
-					// Perform a search or search operation on the B+ tree
-					case "Search":
-						String result = "";
-
-						// Perform search (across a range) operation
-						if (tokens.length == 3) {
-							ArrayList<Double> values = bpt.search(
-											Integer.parseInt(tokens[1]),
-											Integer.parseInt(tokens[2]));
-
-							// Record search result as a String
-							if (values.size() != 0) {
-								for (double v : values) { result += v + ", "; }
-								result = result.substring(0, result.length() - 2);
-							} else {
-								result = "Null";
-							}
-
-						}
-
-						// Perform search operation
-						else {
-
-							/* Perform search for key, if resulting value is
-							   null, then the key could not be found */
-							Double value = bpt.search(Integer.parseInt(tokens[1]));
-							result = (value == null) ? "Null" :
-														Double.toString(value);
-						}
-
-						// Output search result in .txt file
-						if (firstLine) {
-							logger.write(result);
-							firstLine = false;
-						} else {
-							logger.write("\n" + result);
-						}
-						logger.flush();
-
-						break;
-					default:
-						throw new IllegalArgumentException("\"" + tokens[0] +
-								"\"" + " is an unacceptable input.");
-				}
-			}
-
-			// Close output file
-			logger.close();
-
-		} catch (FileNotFoundException e) {
-			System.err.println(e);
-		} catch (IllegalArgumentException e) {
-			System.err.println(e);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			System.err.println(e);
 		}
 	}
+
 }

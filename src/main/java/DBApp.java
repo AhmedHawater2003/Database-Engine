@@ -86,7 +86,7 @@ public class DBApp {
 
 
 	public static void main( String[] args ){
-		bplustree b = new bplustree();
+//		bplustree b = new bplustree();
 
 	try{
 			String strTableName = "Student";
