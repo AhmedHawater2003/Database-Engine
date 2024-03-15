@@ -1,6 +1,8 @@
 
 /** * @author Wael Abouelsaadat */
 
+import exceptions.DBAppException;
+
 import java.util.Hashtable;
 import java.util.Iterator;
 //import java.lang.*;
@@ -31,7 +33,7 @@ public class DBApp {
 	// type as value
 	public void createTable(String strTableName, 
 							String strClusteringKeyColumn,  
-							Hashtable<String,String> htblColNameType) throws DBAppException{
+							Hashtable<String,String> htblColNameType) throws DBAppException {
 								
 		throw new DBAppException("not implemented yet");
 	}
@@ -86,7 +88,7 @@ public class DBApp {
 
 
 	public static void main( String[] args ){
-//		bplustree b = new bplustree();
+//		storage.bplustree b = new storage.bplustree();
 
 	try{
 			String strTableName = "Student";

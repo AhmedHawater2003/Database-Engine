@@ -1,6 +1,7 @@
+package storage;
+
 import java.lang.*;
 import java.util.*;
-import java.io.*;
 
 public class bplustree {
 	int m;
@@ -1084,7 +1085,7 @@ public class bplustree {
 
 		// Ensure correct number of arguments
 //		if (args.length != 1) {
-//			System.err.println("usage: java bplustree <file_name>");
+//			System.err.println("usage: java storage.bplustree <file_name>");
 //			System.exit(-1);
 //		}
 
@@ -1134,7 +1135,7 @@ public class bplustree {
 //
 //					// Initializes an m-order B+ tree
 //					case "Initialize":
-//						bpt = new bplustree(Integer.parseInt(tokens[1]));
+//						bpt = new storage.bplustree(Integer.parseInt(tokens[1]));
 //						break;
 //
 //					// Insert a dictionary pair into the B+ tree
