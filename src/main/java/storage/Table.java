@@ -2,6 +2,7 @@ package storage;
 
 import com.opencsv.CSVWriter;
 import helpers.ConfigReader;
+import helpers.MetaDataManger;
 
 import java.io.*;
 import java.util.*;
@@ -15,7 +16,7 @@ public class Table implements Serializable {
     private String clusteringKey;
 
     public Table(String tableName, String clusteringKey, Hashtable<String, String> colNameType) throws IOException {
-        pages = new ArrayList<>();
+        this.pages = new ArrayList<>();
         this.tableName = tableName;
         this.clusteringKey = clusteringKey;
         initTableMetaData(colNameType);
@@ -25,24 +26,12 @@ public class Table implements Serializable {
         return tableName;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
     public ArrayList<String> getPages() {
         return pages;
     }
 
-    public void setPages(ArrayList<String> pages) {
-        this.pages = pages;
-    }
-
     public String getClusteringKey() {
         return clusteringKey;
-    }
-
-    public void setClusteringKey(String clusteringKey) {
-        this.clusteringKey = clusteringKey;
     }
 
     public boolean isEmpty() {
@@ -58,20 +47,24 @@ public class Table implements Serializable {
             rows.add(new String[]{getTableName(), colName, colNameType.get(colName), "False", "null", "null"});
         }
 
-        File file = new File(ConfigReader.getInstance().read("MetaDataFileName"));
-        FileWriter outputFile = new FileWriter(file);
-        CSVWriter writer = new CSVWriter(outputFile);
-        writer.writeAll(rows);
-        writer.close();
+        MetaDataManger.getInstance().writeAll(rows);
     }
 
 
     public void serialize() throws IOException {
-        FileOutputStream fileOut = new FileOutputStream("serialized/tables" + getTableName() + ".class");
+        FileOutputStream fileOut = new FileOutputStream("serialized/tables/" + getTableName() + ".class");
         ObjectOutputStream out = new ObjectOutputStream(fileOut);
         out.writeObject(this);
         out.close();
         fileOut.close();
     }
 
+    public static Table deserialize(String tableName) throws IOException, ClassNotFoundException {
+        FileInputStream fileIn = new FileInputStream("serialized/tables/" + tableName + ".class");
+        ObjectInputStream in = new ObjectInputStream(fileIn);
+        Table table = (Table) in.readObject();
+        in.close();
+        fileIn.close();
+        return table;
+    }
 }

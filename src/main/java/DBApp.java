@@ -7,6 +7,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import exceptions.DBAppException;
 import helpers.ConfigReader;
+import helpers.MetaDataColumns;
+import helpers.MetaDataManger;
 import storage.Table;
 
 import java.io.*;
@@ -27,7 +29,7 @@ public class DBApp {
     // execute at application startup
     public void init() {
         File file = new File(ConfigReader.getInstance().read("MetaDataFileName"));
-        if(!file.exists()){
+        if (!file.exists()) {
             try {
                 file.createNewFile();
             } catch (IOException e) {
@@ -48,14 +50,8 @@ public class DBApp {
                             String strClusteringKeyColumn,
                             Hashtable<String, String> htblColNameType) throws DBAppException, IOException {
 
-        FileReader filereader = new FileReader(ConfigReader.getInstance().read("MetaDataFileName"));
-        CSVReader csvReader = new CSVReader(filereader);
-        String[] nextRecord;
-
-        while ((nextRecord = csvReader.readNext()) != null) {
-            if (nextRecord[0].equals(strTableName)) {
-                throw new DBAppException("Table already exists");
-            }
+        if (MetaDataManger.getInstance().exists(MetaDataColumns.TABLE_NAME, strTableName)) {
+            throw new DBAppException("Table already exists");
         }
 
         Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
