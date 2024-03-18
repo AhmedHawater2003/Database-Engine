@@ -1,9 +1,10 @@
 package storage;
 
+import java.io.*;
 import java.lang.*;
 import java.util.*;
 
-public class bplustree {
+public class bplustree implements Serializable {
 	int m;
 	InternalNode root;
 	LeafNode firstLeaf;
@@ -735,6 +736,47 @@ public class bplustree {
 
 	public  ArrayList<HashSet<String>> searchLessThan(Comparable upperBound, boolean inclusive){
 		return search(min,upperBound,true,inclusive);
+	}
+
+	public void serialize(String stringPath){
+
+		try {
+			// Create an output stream for the file where the object will be stored
+			FileOutputStream fileOut = new FileOutputStream("serialized/Indices/"+stringPath+".class");
+			ObjectOutputStream out = new ObjectOutputStream(fileOut);
+
+			// Write the mySambosa object to the output stream
+			out.writeObject(this);
+
+			// Close the output stream
+			out.close();
+			fileOut.close();
+
+
+		} catch (Exception i) {
+			i.printStackTrace();
+		}
+	}
+	public static bplustree deserialize(String stringPath){
+		bplustree e = null;
+		try {
+			// Create a new file input stream for the specified file
+			FileInputStream fileIn = new FileInputStream("serialized/Indices/"+stringPath+".class");
+
+			// Create a new object input stream for the file
+			ObjectInputStream in = new ObjectInputStream(fileIn);
+
+			// Read the serialized object from the object input stream and cast it as a mySambosa object
+			e = (bplustree) in.readObject();
+
+			// Close the input stream
+			in.close();
+			fileIn.close();
+
+		} catch (Exception i) {
+			i.printStackTrace();
+		}
+		return e;
 	}
 
 	/**

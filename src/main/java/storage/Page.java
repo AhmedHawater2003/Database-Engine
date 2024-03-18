@@ -10,7 +10,12 @@ import exceptions.DBAppException;
 public class Page implements Serializable {
 
     private final int maxNumberOfRecords = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
-    Vector<Tuple> records;
+
+    public Vector<Tuple> getRecords() {
+        return records;
+    }
+
+    private Vector<Tuple> records;
 
     public Page() {
         records = new Vector<>();

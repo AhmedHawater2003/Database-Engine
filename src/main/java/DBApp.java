@@ -12,6 +12,13 @@ import helpers.MetaDataManger;
 import storage.Table;
 
 import java.io.*;
+import storage.Page;
+import storage.Table;
+import storage.Tuple;
+import storage.bplustree;
+
+import java.io.*;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 //import java.lang.*;
@@ -59,13 +66,129 @@ public class DBApp {
     }
 
 
-    // following method creates a B+tree index
-    public void createIndex(String strTableName,
-                            String strColName,
-                            String strIndexName) throws DBAppException {
+	// following method creates a B+tree index 
+	public void createIndex(String   strTableName,
+							String   strColName,
+							String   strIndexName) throws DBAppException{
+		String targetline = "";
+		String editedline = "";
+		//check that the table exists with the correct naming
+		try {
 
-        throw new DBAppException("not implemented yet");
-    }
+			FileReader filereader = new FileReader("metadata.csv");
+			boolean tableFound = false , columnFound = false , indexValid = false;
+
+
+			CSVReader csvReader = new CSVReader(filereader);
+			String[] nextRecord;
+
+
+			while ((nextRecord = csvReader.readNext()) != null) {
+
+				if(nextRecord[0].equals(strTableName)){
+					tableFound = true;
+					if(nextRecord[1].equals(strColName)){
+						columnFound=true;
+						if(nextRecord[4].equals("null")){
+							indexValid = true;
+							//edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
+							targetline+=nextRecord[0]+","+nextRecord[1]+","+nextRecord[2]+","+nextRecord[3]+","+nextRecord[4]+","+nextRecord[5];
+							nextRecord[4] = strIndexName;
+							nextRecord[5] = "B+tree";
+							editedline+=nextRecord[0]+","+nextRecord[1]+","+nextRecord[2]+","+nextRecord[3]+","+nextRecord[4]+","+nextRecord[5];
+							// write to the actual csv file
+
+
+
+							break;
+						}
+					}
+				}
+			}
+			if(!tableFound){
+				throw new DBAppException("Table Not Found!");
+			}
+			else if(!columnFound){
+				throw new DBAppException("Column Not Found!");
+
+			}
+			else if(!indexValid){
+				throw new DBAppException("There is already an Index on this column");
+			}
+
+
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+		Table myTable = null;
+
+
+		//load the table
+		try {
+
+			FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName +".class");
+			ObjectInputStream in = new ObjectInputStream(fileIn);
+
+
+			myTable = (Table) in.readObject();
+
+			in.close();
+			fileIn.close();
+
+
+
+		} catch (Exception i) {
+			i.printStackTrace();
+		}
+		//create index
+		int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
+		bplustree index = new bplustree(fanout);
+		try{
+			FileReader filereader = new FileReader("metadata.csv");
+
+			CSVReader csvReader = new CSVReader(filereader);
+			CSVWriter writer = new CSVWriter(new FileWriter("metadata.csv"));
+			String[] nextLine;
+
+			while ((nextLine = csvReader.readNext()) != null) {
+				String temp = nextLine[0]+","+nextLine[1]+","+nextLine[2]+","+nextLine[3]+","+nextLine[4]+","+nextLine[5];
+				if(temp.equals(targetline)){
+					nextLine = editedline.split(",");
+				}
+				writer.writeNext(nextLine);
+			}
+			writer.close();
+
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+        if(!myTable.isEmpty()) {
+			for (String pageName : myTable.getPages()) {
+				Page page = null;
+				try {
+
+					FileInputStream fileIn = new FileInputStream("serialized/pages/" + pageName + ".class");
+					ObjectInputStream in = new ObjectInputStream(fileIn);
+					page = (Page) in.readObject();
+					for (Tuple t : page.getRecords()) {
+						Hashtable<String,Object> c = t.getContent();
+//						!TODO: check how will you handle dups
+						index.insert((Comparable) c.get(strColName), pageName);
+					}
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+
+		index.serialize(strIndexName);
+
+	}
 
 
     // following method inserts one row only.
