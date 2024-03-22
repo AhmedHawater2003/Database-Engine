@@ -22,8 +22,10 @@ import storage.Tuple;
 import storage.bplustree;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 //import java.lang.*;
 
 
@@ -197,6 +199,14 @@ public class DBApp {
         // !TODO validate inserted table content is compatible with the desired table
         // !TODO update the coresponding indicies
 
+        List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
+        ArrayList<bplustree> indices = new ArrayList<>();
+        List<String> columnNames = columnsWithIndex.get(0);
+        List<String> indexNames = columnsWithIndex.get(1);
+        for (String indexName : indexNames) {
+            indices.add(bplustree.deserialize(indexName));
+        }
+
         Table table = Table.deserialize(strTableName);
         Tuple tuple = new Tuple(htblColNameValue, table.getClusteringKey());
 
@@ -211,7 +221,7 @@ public class DBApp {
         while (targetPageInfo != null) {
             targetPage = Page.deserialize(targetPageInfo.getPageAddress());
             if (!targetPage.isFull()) break;
-            tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple);
+            tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple ,columnNames,indices);
             targetPageInfo = table.getNextPageInfo(targetPageInfo);
         }
 
@@ -221,23 +231,49 @@ public class DBApp {
         } else
             targetPage = Page.deserialize(targetPageInfo.getPageAddress());
 
+        insertIntoIndices(indices,columnNames,tuple,targetPageInfo.getPageAddress());
         targetPage.insert(tuple);
         targetPage.serialize(targetPageInfo.getPageAddress());
         table.serialize();
+        for(int i=0;i<indices.size();i++){
+            indices.get(i).serialize(indexNames.get(i));
+        }
 
     }
 
-    public Tuple insertIntoFullPage(Table table, PageInfo pageInfo, Page page, Tuple tuple)
-            throws DBAppException, IOException {
 
+
+    public Tuple insertIntoFullPage(Table table, PageInfo pageInfo, Page page, Tuple tuple,List<String> columnNames,ArrayList<bplustree> indices)
+            throws DBAppException, IOException {
+//        we need to update the index from the old index and update to the new index
         if (page.getRecords().lastElement().compareTo(tuple) > 0) {
+            //delete from the old index
+            insertIntoIndices(indices,columnNames,tuple,pageInfo.getPageAddress());
             table.updatePageInfoMinKey(pageInfo, tuple.getClusteringKeyValue());
             tuple = page.swapRecords(tuple.clone(), page.getRecords().size() - 1);
+            deleteFromIndices(indices,columnNames,tuple,pageInfo.getPageAddress());
             page.serialize(pageInfo.getPageAddress());
         }
         return tuple;
     }
 
+    private void insertIntoIndices(ArrayList<bplustree> indices, List<String> columnNames , Tuple record ,String pageAddress){
+        for (int i = 0; i < indices.size(); i++) {
+            bplustree index = indices.get(i);
+            String columnName = columnNames.get(i);
+            Hashtable<String, Object> content = record.getContent();
+            index.insert((Comparable) content.get(columnName),pageAddress);
+        }
+    }
+
+    private void deleteFromIndices(ArrayList<bplustree> indices, List<String> columnNames , Tuple record ,String pageAddress){
+        for (int i = 0; i < indices.size(); i++) {
+            bplustree index = indices.get(i);
+            String columnName = columnNames.get(i);
+            Hashtable<String, Object> content = record.getContent();
+            index.deleteFromPage((Comparable) content.get(columnName),pageAddress);
+        }
+    }
 
     // following method updates one row only
     // htblColNameValue holds the key and new value

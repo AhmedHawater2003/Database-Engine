@@ -548,13 +548,16 @@ public class bplustree implements Serializable {
 		}
 	}
 
-	public void deleteCertainValue(Comparable key ,String value){
+	public void deleteFromPage(Comparable key ,String pageName){
 		HashMap<String,Integer> map = this.search(key);
-		if(map.get(value)==1){
-			this.delete(key);
+		if(map.get(pageName)==1){
+			map.remove(pageName);
+			if(map.isEmpty()){
+				this.delete(key);
+			}
 		}
 		else{
-			map.put(value,map.get(value)-1);
+			map.put(pageName,map.get(pageName)-1);
 		}
 	}
 
@@ -566,22 +569,21 @@ public class bplustree implements Serializable {
 	 */
 	public void insert(Comparable key, String value){
 
-
+		HashMap<String,Integer> map;
 		if (isEmpty()) {
 			max = key;
 			min = key;
 			/* Flow of execution goes here only when first insert takes place */
 
 			// Create leaf node as first node in B plus tree (root is null)
-			HashMap<String,Integer> map = new HashMap<String,Integer>();
+			map = new HashMap<String,Integer>();
 			map.put(value,1);
 			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key,map));
 
 			// Set as first leaf node (can be used later for in-order leaf traversal)
 			this.firstLeaf = ln;
 
-		} else if(this.search(key)!=null){
-			HashMap<String,Integer> map = this.search(key);
+		} else if((map = this.search(key))!=null){
 
 			map.put(value,map.getOrDefault(value,0)+1);
 		}
@@ -600,7 +602,7 @@ public class bplustree implements Serializable {
 												findLeafNode(key);
 
 			// Insert into leaf node fails if node becomes overfull
-			HashMap<String,Integer> map = new HashMap<String,Integer>();
+			map = new HashMap<String,Integer>();
 			map.put(value,1);
 			if (!ln.insert(new DictionaryPair(key, map))) {
 

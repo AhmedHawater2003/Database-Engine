@@ -57,7 +57,22 @@ public class MetaDataManger {
         return result;
     }
 
-
+    public List<List<String>> getColumnsWithIndex(String tableName) throws IOException {
+        List<List<String>> tableInfo = readTableInfo(tableName, new MetaDataColumns[] {MetaDataColumns.COLUMN_NAME,MetaDataColumns.INDEX_NAME});
+        List<List<String>> columnsWithIndex = new ArrayList<>();
+        List<String> indexNames = tableInfo.get(1);
+        List<String> validColumns = new ArrayList<>();
+        List<String> validIndexes = new ArrayList<>();
+        for (String indexName : indexNames) {
+            if(!indexName.equals("null")){
+                validColumns.add(tableInfo.get(0).get(indexNames.indexOf(indexName)));
+                validIndexes.add(indexName);
+            }
+        }
+        columnsWithIndex.add(validColumns);
+        columnsWithIndex.add(validIndexes);
+        return columnsWithIndex;
+    }
 
 
     public boolean exists(MetaDataColumns column, String value) throws IOException {
