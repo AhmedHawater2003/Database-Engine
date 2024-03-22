@@ -34,7 +34,7 @@ public class bplustree implements Serializable {
 				return o1.compareTo(o2);
 			}
 		};
-		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, new HashSet<String>()), c);
+		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, new HashMap<String,Integer>()), c);
 	}
 
 	/**
@@ -548,6 +548,16 @@ public class bplustree implements Serializable {
 		}
 	}
 
+	public void deleteCertainValue(Comparable key ,String value){
+		HashMap<String,Integer> map = this.search(key);
+		if(map.get(value)==1){
+			this.delete(key);
+		}
+		else{
+			map.put(value,map.get(value)-1);
+		}
+	}
+
 	/**
 	 * Given an integer key and floating point value, this method inserts a
 	 * dictionary pair accordingly into the B+ tree.
@@ -563,36 +573,39 @@ public class bplustree implements Serializable {
 			/* Flow of execution goes here only when first insert takes place */
 
 			// Create leaf node as first node in B plus tree (root is null)
-			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key, new HashSet<String>(){{
-																					add(value);
-			}}));
+			HashMap<String,Integer> map = new HashMap<String,Integer>();
+			map.put(value,1);
+			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key,map));
 
 			// Set as first leaf node (can be used later for in-order leaf traversal)
 			this.firstLeaf = ln;
 
-		} else {
+		} else if(this.search(key)!=null){
+			HashMap<String,Integer> map = this.search(key);
+
+			map.put(value,map.getOrDefault(value,0)+1);
+		}
+		else{
 			if(key.compareTo(max)>0)
 				max=key;
 			if(key.compareTo(min)<0)
 				min=key;
-			HashSet<String> temp = this.search(key);
-			if(temp!=null) {
-				temp.add(value);
-				return;
-			}
+//			HashSet<String> temp = this.search(key);
+//			if(temp!=null) {
+//				temp.add(value);
+//				return;
+//			}
 			// Find leaf node to insert into
 			LeafNode ln = (this.root == null) ? this.firstLeaf :
 												findLeafNode(key);
 
 			// Insert into leaf node fails if node becomes overfull
-			if (!ln.insert(new DictionaryPair(key, new HashSet<String>(){{
-				add(value);
-			}}))) {
+			HashMap<String,Integer> map = new HashMap<String,Integer>();
+			map.put(value,1);
+			if (!ln.insert(new DictionaryPair(key, map))) {
 
 				// Sort all the dictionary pairs with the included pair to be inserted
-				ln.dictionary[ln.numPairs] = new DictionaryPair(key, new HashSet<String>(){{
-					add(value);
-				}});
+				ln.dictionary[ln.numPairs] = new DictionaryPair(key, map);
 				ln.numPairs++;
 				sortDictionary(ln.dictionary);
 
@@ -665,7 +678,7 @@ public class bplustree implements Serializable {
 	 * @param key: the key to be searched within the B+ tree
 	 * @return the floating point value associated with the key within the B+ tree
 	 */
-	public HashSet<String> search(Comparable key) {
+	public HashMap<String, Integer> search(Comparable key) {
 
 		// If B+ tree is completely empty, simply return null
 		if (isEmpty()) { return null; }
@@ -694,10 +707,10 @@ public class bplustree implements Serializable {
 	 * @return an ArrayList<Double> that holds all values of dictionary pairs
 	 * whose keys are within the specified range
 	 */
-	public ArrayList<HashSet<String>> search(Comparable lowerBound, Comparable upperBound,boolean lowerBoundInclusive,boolean upperBoundInclusive ) {
+	public ArrayList<HashMap<String,Integer>> search(Comparable lowerBound, Comparable upperBound,boolean lowerBoundInclusive,boolean upperBoundInclusive ) {
 
 		// Instantiate Double array to hold values
-		ArrayList<HashSet<String>> values = new ArrayList<HashSet<String>>();
+		ArrayList<HashMap<String,Integer>> values = new ArrayList<HashMap<String,Integer>>();
 
 		// Iterate through the doubly linked list of leaves
 		LeafNode currNode = this.firstLeaf;
@@ -730,11 +743,11 @@ public class bplustree implements Serializable {
 
 		return values;
 	}
-	public  ArrayList<HashSet<String>> searchGreaterThan(Comparable lowerBound, boolean inclusive){
+	public  ArrayList<HashMap<String,Integer>> searchGreaterThan(Comparable lowerBound, boolean inclusive){
 		return search(lowerBound,max,inclusive,true);
 	}
 
-	public  ArrayList<HashSet<String>> searchLessThan(Comparable upperBound, boolean inclusive){
+	public  ArrayList<HashMap<String,Integer>> searchLessThan(Comparable upperBound, boolean inclusive){
 		return search(min,upperBound,true,inclusive);
 	}
 
@@ -1092,14 +1105,14 @@ public class bplustree implements Serializable {
 	 */
 	public class DictionaryPair implements Comparable<DictionaryPair>, Serializable {
 		Comparable key;
-		HashSet<String> value;
+		HashMap<String,Integer> value;
 
 		/**
 		 * Constructor
 		 * @param key: the key of the key-value pair
 		 * @param value: the value of the key-value pair
 		 */
-		public DictionaryPair(Comparable key, HashSet<String> value) {
+		public DictionaryPair(Comparable key, HashMap<String,Integer> value) {
 			this.key = key;
 			this.value = value;
 		}
@@ -1133,7 +1146,7 @@ public class bplustree implements Serializable {
 
 		// Read from file
 
-		try {
+
 
 //			// Prepare to read input file
 //			File file = new File(System.getProperty("user.dir") + "/" + fileName);
@@ -1151,10 +1164,11 @@ public class bplustree implements Serializable {
 			bpt.insert("0108","31.907");
 			bpt.insert("5608","3.26");
 			bpt.insert("0234","121.56");
+			bpt.insert("0234","121.56");
 			bpt.insert("4325","-109.23");
 			bpt.delete("0108");
 			bpt.insert("0234","blabizo");
-			HashSet<String> temp = bpt.search("0234");
+			HashMap<String,Integer> temp = bpt.search("0234");
 			bpt.insert("0102","39.56");
 			bpt.insert("0065","-3.95");
 			bpt.delete("0102");
@@ -1165,7 +1179,7 @@ public class bplustree implements Serializable {
 			bpt.insert("0032","0.02");
 			bpt.insert("0220","3.55");
 			bpt.delete("0234");
-			HashSet<String> temp3=bpt.search("0065");
+			HashMap<String,Integer> temp3=bpt.search("0065");
 			System.out.print("blalf");
 
 //			// Perform an operation for each line in the input file
@@ -1239,9 +1253,7 @@ public class bplustree implements Serializable {
 //			// Close output file
 //			logger.close();
 
-		} catch (Exception e) {
-			System.err.println(e);
-		}
+
 	}
 
 }

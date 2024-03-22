@@ -72,13 +72,13 @@ public class DBApp {
     // following method creates a B+tree index
     public void createIndex(String strTableName,
                             String strColName,
-                            String strIndexName) throws DBAppException {
+                            String strIndexName) throws DBAppException, IOException, ClassNotFoundException {
         String targetline = "";
         String editedline = "";
         //check that the table exists with the correct naming
         try {
 
-            FileReader filereader = new FileReader("metadata.csv");
+            FileReader filereader = new FileReader("resources/metadata.csv");
             boolean tableFound = false, columnFound = false, indexValid = false;
 
 
@@ -122,33 +122,33 @@ public class DBApp {
         }
 
 
-        Table myTable = null;
+        Table myTable = (Table) Table.deserialize(strTableName);
 
 
         //load the table
-        try {
-
-            FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName + ".class");
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-
-
-            myTable = (Table) in.readObject();
-
-            in.close();
-            fileIn.close();
-
-
-        } catch (Exception i) {
-            i.printStackTrace();
-        }
+//        try {
+//
+//            FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName + ".class");
+//            ObjectInputStream in = new ObjectInputStream(fileIn);
+//
+//
+//            myTable = (Table) in.readObject();
+//
+//            in.close();
+//            fileIn.close();
+//
+//
+//        } catch (Exception i) {
+//            i.printStackTrace();
+//        }
         //create index
         int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
         bplustree index = new bplustree(fanout);
         try {
-            FileReader filereader = new FileReader("metadata.csv");
+            FileReader filereader = new FileReader("resources/metadata.csv");
 
             CSVReader csvReader = new CSVReader(filereader);
-            CSVWriter writer = new CSVWriter(new FileWriter("metadata.csv"));
+            CSVWriter writer = new CSVWriter(new FileWriter("resources/metadata.csv"));
             String[] nextLine;
 
             while ((nextLine = csvReader.readNext()) != null) {
@@ -257,7 +257,10 @@ public class DBApp {
     // htblColNameValue enteries are ANDED together
     public void deleteFromTable(String strTableName,
                                 Hashtable<String, Object> htblColNameValue) throws DBAppException {
+        //make sure when deleting a ceratin tuple check if there is any index on another column and if there is go and deserialize this bplus tree and call delete with the
+        //page of the tuple being deleted
 
+        //Whenever delete is called and there is an index on a column call it with the page the tuple is in
         throw new DBAppException("not implemented yet");
     }
 
@@ -343,6 +346,8 @@ public class DBApp {
 //            dbApp.createTable("Student", "id", htblColNameType);
 //            var record1 = new Hashtable<String, Object>();
 //            var record2 = new Hashtable<String, Object>();
+
+            dbApp.createIndex("Student","id","idIndex");
 //
 //            record1.put("id", 1);
 //            record1.put("name", "Ahmed");
@@ -359,12 +364,12 @@ public class DBApp {
 
         }
 
-        try {
-            Page deserializedPage = Page.deserialize("serialized/pages/Student1.class");
-            System.out.println(deserializedPage);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Page deserializedPage = Page.deserialize("serialized/pages/Student1.class");
+//            System.out.println(deserializedPage);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
 }
