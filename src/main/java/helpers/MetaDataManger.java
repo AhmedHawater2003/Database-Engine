@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -35,6 +36,28 @@ public class MetaDataManger {
         FileReader fileReader = new FileReader(META_DATA_FILE);
         return new CSVReader(fileReader);
     }
+
+
+    public List<List<String>> readTableInfo(String tableName, MetaDataColumns[] targetColumns) throws IOException {
+        List<List<String>> result = new ArrayList<>();
+        CSVReader csvReader = getCSVReader();
+
+        List<String[]> TableInfo = csvReader.readAll().stream()
+                .filter(strings -> strings[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName)).toList();
+
+        csvReader.close();
+
+        for (String[] columnInfo : TableInfo) {
+            List<String> row = new ArrayList<>();
+            for (MetaDataColumns column : targetColumns) {
+                row.add(columnInfo[column.ordinal()]);
+            }
+            result.add(row);
+        }
+        return result;
+    }
+
+
 
 
     public boolean exists(MetaDataColumns column, String value) throws IOException {
