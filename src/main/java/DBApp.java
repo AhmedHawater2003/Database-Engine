@@ -9,16 +9,19 @@ import exceptions.DBAppException;
 import helpers.ConfigReader;
 import helpers.MetaDataColumns;
 import helpers.MetaDataManger;
+import storage.Page;
+import storage.PageInfo;
 import storage.Table;
+import storage.Tuple;
 
 import java.io.*;
+
 import storage.Page;
 import storage.Table;
 import storage.Tuple;
 import storage.bplustree;
 
 import java.io.*;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 //import java.lang.*;
@@ -66,137 +69,173 @@ public class DBApp {
     }
 
 
-	// following method creates a B+tree index 
-	public void createIndex(String   strTableName,
-							String   strColName,
-							String   strIndexName) throws DBAppException{
-		String targetline = "";
-		String editedline = "";
-		//check that the table exists with the correct naming
-		try {
+    // following method creates a B+tree index
+    public void createIndex(String strTableName,
+                            String strColName,
+                            String strIndexName) throws DBAppException {
+        String targetline = "";
+        String editedline = "";
+        //check that the table exists with the correct naming
+        try {
 
-			FileReader filereader = new FileReader("metadata.csv");
-			boolean tableFound = false , columnFound = false , indexValid = false;
-
-
-			CSVReader csvReader = new CSVReader(filereader);
-			String[] nextRecord;
+            FileReader filereader = new FileReader("metadata.csv");
+            boolean tableFound = false, columnFound = false, indexValid = false;
 
 
-			while ((nextRecord = csvReader.readNext()) != null) {
-
-				if(nextRecord[0].equals(strTableName)){
-					tableFound = true;
-					if(nextRecord[1].equals(strColName)){
-						columnFound=true;
-						if(nextRecord[4].equals("null")){
-							indexValid = true;
-							//edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
-							targetline+=nextRecord[0]+","+nextRecord[1]+","+nextRecord[2]+","+nextRecord[3]+","+nextRecord[4]+","+nextRecord[5];
-							nextRecord[4] = strIndexName;
-							nextRecord[5] = "B+tree";
-							editedline+=nextRecord[0]+","+nextRecord[1]+","+nextRecord[2]+","+nextRecord[3]+","+nextRecord[4]+","+nextRecord[5];
-							// write to the actual csv file
+            CSVReader csvReader = new CSVReader(filereader);
+            String[] nextRecord;
 
 
+            while ((nextRecord = csvReader.readNext()) != null) {
 
-							break;
-						}
-					}
-				}
-			}
-			if(!tableFound){
-				throw new DBAppException("Table Not Found!");
-			}
-			else if(!columnFound){
-				throw new DBAppException("Column Not Found!");
-
-			}
-			else if(!indexValid){
-				throw new DBAppException("There is already an Index on this column");
-			}
+                if (nextRecord[0].equals(strTableName)) {
+                    tableFound = true;
+                    if (nextRecord[1].equals(strColName)) {
+                        columnFound = true;
+                        if (nextRecord[4].equals("null")) {
+                            indexValid = true;
+                            //edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
+                            targetline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                            nextRecord[4] = strIndexName;
+                            nextRecord[5] = "B+tree";
+                            editedline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                            // write to the actual csv file
 
 
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!tableFound) {
+                throw new DBAppException("Table Not Found!");
+            } else if (!columnFound) {
+                throw new DBAppException("Column Not Found!");
+
+            } else if (!indexValid) {
+                throw new DBAppException("There is already an Index on this column");
+            }
 
 
-		Table myTable = null;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
 
-		//load the table
-		try {
-
-			FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName +".class");
-			ObjectInputStream in = new ObjectInputStream(fileIn);
+        Table myTable = null;
 
 
-			myTable = (Table) in.readObject();
+        //load the table
+        try {
 
-			in.close();
-			fileIn.close();
+            FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName + ".class");
+            ObjectInputStream in = new ObjectInputStream(fileIn);
 
 
+            myTable = (Table) in.readObject();
 
-		} catch (Exception i) {
-			i.printStackTrace();
-		}
-		//create index
-		int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
-		bplustree index = new bplustree(fanout);
-		try{
-			FileReader filereader = new FileReader("metadata.csv");
+            in.close();
+            fileIn.close();
 
-			CSVReader csvReader = new CSVReader(filereader);
-			CSVWriter writer = new CSVWriter(new FileWriter("metadata.csv"));
-			String[] nextLine;
 
-			while ((nextLine = csvReader.readNext()) != null) {
-				String temp = nextLine[0]+","+nextLine[1]+","+nextLine[2]+","+nextLine[3]+","+nextLine[4]+","+nextLine[5];
-				if(temp.equals(targetline)){
-					nextLine = editedline.split(",");
-				}
-				writer.writeNext(nextLine);
-			}
-			writer.close();
+        } catch (Exception i) {
+            i.printStackTrace();
+        }
+        //create index
+        int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
+        bplustree index = new bplustree(fanout);
+        try {
+            FileReader filereader = new FileReader("metadata.csv");
 
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-        if(!myTable.isEmpty()) {
-			for (String pageName : myTable.getPages()) {
-				Page page = null;
-				try {
+            CSVReader csvReader = new CSVReader(filereader);
+            CSVWriter writer = new CSVWriter(new FileWriter("metadata.csv"));
+            String[] nextLine;
 
-					FileInputStream fileIn = new FileInputStream("serialized/pages/" + pageName + ".class");
-					ObjectInputStream in = new ObjectInputStream(fileIn);
-					page = (Page) in.readObject();
-					for (Tuple t : page.getRecords()) {
-						Hashtable<String,Object> c = t.getContent();
+            while ((nextLine = csvReader.readNext()) != null) {
+                String temp = nextLine[0] + "," + nextLine[1] + "," + nextLine[2] + "," + nextLine[3] + "," + nextLine[4] + "," + nextLine[5];
+                if (temp.equals(targetline)) {
+                    nextLine = editedline.split(",");
+                }
+                writer.writeNext(nextLine);
+            }
+            writer.close();
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        if (!myTable.isEmpty()) {
+            for (String pageName : myTable.getPagesAddresses()) {
+                Page page = null;
+                try {
+
+                    FileInputStream fileIn = new FileInputStream("serialized/pages/" + pageName + ".class");
+                    ObjectInputStream in = new ObjectInputStream(fileIn);
+                    page = (Page) in.readObject();
+                    for (Tuple t : page.getRecords()) {
+                        Hashtable<String, Object> c = t.getContent();
 //						!TODO: check how will you handle dups
-						index.insert((Comparable) c.get(strColName), pageName);
-					}
+                        index.insert((Comparable) c.get(strColName), pageName);
+                    }
 
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
 
-		index.serialize(strIndexName);
+        index.serialize(strIndexName);
 
-	}
+    }
 
 
     // following method inserts one row only.
     // htblColNameValue must include a value for the primary key
     public void insertIntoTable(String strTableName,
-                                Hashtable<String, Object> htblColNameValue) throws DBAppException {
+                                Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
-        throw new DBAppException("not implemented yet");
+        // !TODO validate inserted table content is compatible with the desired table
+        // !TODO update the coresponding indicies
+
+        Table table = Table.deserialize(strTableName);
+        Tuple tuple = new Tuple(htblColNameValue, table.getClusteringKey());
+
+        if (table.isEmpty()) {
+            Page newPage = table.createNewPage(tuple.getClusteringKeyValue());
+            newPage.serialize(table.getTargetPageInfo(tuple.getClusteringKeyValue()).getPageAddress());
+        }
+
+        PageInfo targetPageInfo = table.getTargetPageInfo(tuple.getClusteringKeyValue());
+        Page targetPage = null;
+
+        while (targetPageInfo != null) {
+            targetPage = Page.deserialize(targetPageInfo.getPageAddress());
+            if (!targetPage.isFull()) break;
+            tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple);
+            targetPageInfo = table.getNextPageInfo(targetPageInfo);
+        }
+
+        if (targetPageInfo == null) {
+            targetPage = table.createNewPage(tuple.getClusteringKeyValue());
+            targetPageInfo = table.getTargetPageInfo(tuple.getClusteringKeyValue());
+        } else
+            targetPage = Page.deserialize(targetPageInfo.getPageAddress());
+
+        targetPage.insert(tuple);
+        targetPage.serialize(targetPageInfo.getPageAddress());
+        table.serialize();
+
+    }
+
+    public Tuple insertIntoFullPage(Table table, PageInfo pageInfo, Page page, Tuple tuple)
+            throws DBAppException, IOException {
+
+        if (page.getRecords().lastElement().compareTo(tuple) > 0) {
+            table.updatePageInfoMinKey(pageInfo, tuple.getClusteringKeyValue());
+            tuple = page.swapRecords(tuple.clone(), page.getRecords().size() - 1);
+            page.serialize(pageInfo.getPageAddress());
+        }
+        return tuple;
     }
 
 
@@ -301,10 +340,30 @@ public class DBApp {
         htblColNameType.put("name", "java.lang.String");
         htblColNameType.put("gpa", "java.lang.double");
         try {
-            dbApp.createTable("Student", "id", htblColNameType);
-        } catch (DBAppException | IOException e) {
+//            dbApp.createTable("Student", "id", htblColNameType);
+//            var record1 = new Hashtable<String, Object>();
+//            var record2 = new Hashtable<String, Object>();
+//
+//            record1.put("id", 1);
+//            record1.put("name", "Ahmed");
+//            record1.put("gpa", 0.95);
+//
+//            record2.put("id", 2);
+//            record2.put("name", "Ali");
+//            record2.put("gpa", 0.85);
+//
+//            dbApp.insertIntoTable("Student", record1);
+//            dbApp.insertIntoTable("Student", record2);
+        } catch (Exception e) {
             e.printStackTrace();
 
+        }
+
+        try {
+            Page deserializedPage = Page.deserialize("serialized/pages/Student1.class");
+            System.out.println(deserializedPage);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
