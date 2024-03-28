@@ -1,5 +1,6 @@
+package app;
 
-/** * @author Wael Abouelsaadat */ 
+/** * @author Wael Abouelsaadat */
 
 public class SQLTerm {
 

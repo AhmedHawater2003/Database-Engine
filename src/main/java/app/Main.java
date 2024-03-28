@@ -1,7 +1,7 @@
+package app;
+
 import java.io.*;
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
-import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -37,7 +37,7 @@ public class Main {
             fileIn.close();
 
 
-            System.out.println("Deserialized Sambosa...");
+            System.out.println("Deserialized app.Sambosa...");
         } catch (Exception i) {
             i.printStackTrace();
         }

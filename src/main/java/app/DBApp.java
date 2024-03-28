@@ -1,4 +1,4 @@
-
+package app;
 /**
  * @author Wael Abouelsaadat
  */
@@ -16,12 +16,8 @@ import storage.Tuple;
 
 import java.io.*;
 
-import storage.Page;
-import storage.Table;
-import storage.Tuple;
 import storage.bplustree;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -313,7 +309,7 @@ public class DBApp {
 
 //        try {
 //            String strTableName = "Student";
-//            DBApp dbApp = new DBApp();
+//            app.DBApp dbApp = new app.DBApp();
 //
 //            Hashtable htblColNameType = new Hashtable();
 //            htblColNameType.put("id", "java.lang.Integer");
@@ -353,8 +349,8 @@ public class DBApp {
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //
-//            SQLTerm[] arrSQLTerms;
-//            arrSQLTerms = new SQLTerm[2];
+//            app.SQLTerm[] arrSQLTerms;
+//            arrSQLTerms = new app.SQLTerm[2];
 //            arrSQLTerms[0]._strTableName = "Student";
 //            arrSQLTerms[0]._strColumnName = "name";
 //            arrSQLTerms[0]._strOperator = "=";
