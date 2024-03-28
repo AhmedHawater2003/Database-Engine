@@ -37,13 +37,18 @@ public class MetaDataManger {
         return new CSVReader(fileReader);
     }
 
-
     public List<List<String>> readTableInfo(String tableName, MetaDataColumns[] targetColumns) throws IOException {
+        return readTableInfo(tableName, targetColumns, strings -> true, false);
+    }
+
+    public List<List<String>> readTableInfo(String tableName, MetaDataColumns[] targetColumns,
+                                            MetaDataFilterFunction function, boolean distinct) throws IOException {
         List<List<String>> result = new ArrayList<>();
         CSVReader csvReader = getCSVReader();
 
         List<String[]> TableInfo = csvReader.readAll().stream()
-                .filter(strings -> strings[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName)).toList();
+                .filter(strings -> strings[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName) &&
+                        function.filter(strings)).toList();
 
         csvReader.close();
 
@@ -52,19 +57,19 @@ public class MetaDataManger {
             for (MetaDataColumns column : targetColumns) {
                 row.add(columnInfo[column.ordinal()]);
             }
-            result.add(row);
+            result.add(distinct ? row.stream().distinct().toList() : row);
         }
         return result;
     }
 
     public List<List<String>> getColumnsWithIndex(String tableName) throws IOException {
-        List<List<String>> tableInfo = readTableInfo(tableName, new MetaDataColumns[] {MetaDataColumns.COLUMN_NAME,MetaDataColumns.INDEX_NAME});
+        List<List<String>> tableInfo = readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_NAME, MetaDataColumns.INDEX_NAME});
         List<List<String>> columnsWithIndex = new ArrayList<>();
         List<String> indexNames = tableInfo.get(1);
         List<String> validColumns = new ArrayList<>();
         List<String> validIndexes = new ArrayList<>();
         for (String indexName : indexNames) {
-            if(!indexName.equals("null")){
+            if (!indexName.equals("null")) {
                 validColumns.add(tableInfo.get(0).get(indexNames.indexOf(indexName)));
                 validIndexes.add(indexName);
             }
