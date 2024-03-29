@@ -52,13 +52,14 @@ public class MetaDataManger {
 
         csvReader.close();
 
-        for (String[] columnInfo : TableInfo) {
-            List<String> row = new ArrayList<>();
-            for (MetaDataColumns column : targetColumns) {
-                row.add(columnInfo[column.ordinal()]);
+        for (MetaDataColumns column : targetColumns) {
+            List<String> temp = new ArrayList<>();
+            for (String[] columnInfo : TableInfo) {
+                temp.add(columnInfo[column.ordinal()]);
             }
-            result.add(distinct ? row.stream().distinct().toList() : row);
+            result.add(distinct ? temp.stream().distinct().toList() : temp);
         }
+
         return result;
     }
 
