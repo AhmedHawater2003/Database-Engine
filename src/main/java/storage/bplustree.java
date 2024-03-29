@@ -757,7 +757,7 @@ public class bplustree implements Serializable {
 
 		try {
 			// Create an output stream for the file where the object will be stored
-			FileOutputStream fileOut = new FileOutputStream("serialized/Indices/"+stringPath+".class");
+			FileOutputStream fileOut = new FileOutputStream("serialized/indices/"+stringPath+".class");
 			ObjectOutputStream out = new ObjectOutputStream(fileOut);
 
 			// Write the mySambosa object to the output stream

@@ -18,10 +18,7 @@ import java.io.*;
 
 import storage.bplustree;
 
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 //import java.lang.*;
 
 
@@ -105,6 +102,7 @@ public class DBApp {
                     }
                 }
             }
+            csvReader.close();
             if (!tableFound) {
                 throw new DBAppException("Table Not Found!");
             } else if (!columnFound) {
@@ -119,43 +117,26 @@ public class DBApp {
             e.printStackTrace();
         }
 
-
         Table myTable = (Table) Table.deserialize(strTableName);
 
-
-        //load the table
-//        try {
-//
-//            FileInputStream fileIn = new FileInputStream("serialized/tables/" + strTableName + ".class");
-//            ObjectInputStream in = new ObjectInputStream(fileIn);
-//
-//
-//            myTable = (Table) in.readObject();
-//
-//            in.close();
-//            fileIn.close();
-//
-//
-//        } catch (Exception i) {
-//            i.printStackTrace();
-//        }
         //create index
         int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
         bplustree index = new bplustree(fanout);
         try {
             FileReader filereader = new FileReader("resources/metadata.csv");
-
             CSVReader csvReader = new CSVReader(filereader);
-            CSVWriter writer = new CSVWriter(new FileWriter("resources/metadata.csv"));
+            List<String[]> lines = new ArrayList<>();
             String[] nextLine;
-
             while ((nextLine = csvReader.readNext()) != null) {
                 String temp = nextLine[0] + "," + nextLine[1] + "," + nextLine[2] + "," + nextLine[3] + "," + nextLine[4] + "," + nextLine[5];
                 if (temp.equals(targetline)) {
                     nextLine = editedline.split(",");
                 }
-                writer.writeNext(nextLine);
+                lines.add(nextLine);
             }
+            csvReader.close();
+            CSVWriter writer = new CSVWriter(new FileWriter("resources/metadata.csv"));
+            writer.writeAll(lines);
             writer.close();
 
         } catch (Exception e) {
@@ -180,12 +161,8 @@ public class DBApp {
                 }
             }
         }
-
-
         index.serialize(strIndexName);
-
     }
-
 
     // following method inserts one row only.
     // htblColNameValue must include a value for the primary key
@@ -378,9 +355,8 @@ public class DBApp {
 //            dbApp.createTable("Student", "id", htblColNameType);
 //            var record1 = new Hashtable<String, Object>();
 //            var record2 = new Hashtable<String, Object>();
-
-            dbApp.createIndex("Student","id","idIndex");
-//
+//              dbApp.createIndex("Student","id","idIndex");
+            dbApp.createIndex("Student","gpa","gpaIndex");
 //            record1.put("id", 1);
 //            record1.put("name", "Ahmed");
 //            record1.put("gpa", 0.95);
