@@ -71,7 +71,7 @@ public class DBApp {
         String targetline = "";
         String editedline = "";
         //check that the table exists with the correct naming
-        try {
+
 
             FileReader filereader = new FileReader("resources/metadata.csv");
             boolean tableFound = false, columnFound = false, indexValid = false;
@@ -113,18 +113,17 @@ public class DBApp {
             }
 
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
 
         Table myTable = (Table) Table.deserialize(strTableName);
+
 
         //create index
         int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
         bplustree index = new bplustree(fanout);
         try {
-            FileReader filereader = new FileReader("resources/metadata.csv");
-            CSVReader csvReader = new CSVReader(filereader);
+            filereader = new FileReader("resources/metadata.csv");
+            csvReader = new CSVReader(filereader);
             List<String[]> lines = new ArrayList<>();
             String[] nextLine;
             while ((nextLine = csvReader.readNext()) != null) {
@@ -143,17 +142,17 @@ public class DBApp {
             throw new RuntimeException(e);
         }
         if (!myTable.isEmpty()) {
-            for (String pageName : myTable.getPagesAddresses()) {
+            for (String pageAddress : myTable.getPagesAddresses()) {
                 Page page = null;
                 try {
 
-                    FileInputStream fileIn = new FileInputStream("serialized/pages/" + pageName + ".class");
+                    FileInputStream fileIn = new FileInputStream(pageAddress);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     page = (Page) in.readObject();
                     for (Tuple t : page.getRecords()) {
                         Hashtable<String, Object> c = t.getContent();
 //						!TODO: check how will you handle dups
-                        index.insert((Comparable) c.get(strColName), pageName);
+                        index.insert((Comparable) c.get(strColName), pageAddress);
                     }
 
                 } catch (Exception e) {
@@ -353,20 +352,20 @@ public class DBApp {
         htblColNameType.put("gpa", "java.lang.double");
         try {
 //            dbApp.createTable("Student", "id", htblColNameType);
-//            var record1 = new Hashtable<String, Object>();
-//            var record2 = new Hashtable<String, Object>();
+            var record1 = new Hashtable<String, Object>();
+            var record2 = new Hashtable<String, Object>();
 //              dbApp.createIndex("Student","id","idIndex");
-            dbApp.createIndex("Student","gpa","gpaIndex");
-//            record1.put("id", 1);
-//            record1.put("name", "Ahmed");
-//            record1.put("gpa", 0.95);
-//
-//            record2.put("id", 2);
-//            record2.put("name", "Ali");
-//            record2.put("gpa", 0.85);
-//
-//            dbApp.insertIntoTable("Student", record1);
-//            dbApp.insertIntoTable("Student", record2);
+//            dbApp.createIndex("Student","gpa","gpaIndex");
+            record1.put("id", 1);
+            record1.put("name", "Ahmed");
+            record1.put("gpa", 0.95);
+
+            record2.put("id", 2);
+            record2.put("name", "Ali");
+            record2.put("gpa", 0.85);
+
+            dbApp.insertIntoTable("Student", record1);
+            dbApp.insertIntoTable("Student", record2);
         } catch (Exception e) {
             e.printStackTrace();
 
