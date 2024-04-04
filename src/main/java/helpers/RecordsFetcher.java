@@ -9,10 +9,10 @@ import java.util.*;
 
 public class RecordsFetcher {
 
-    public static HashSet<Tuple> fetchWithIndex(SQLTerm sqlTerm, String indexName) throws IOException, ClassNotFoundException {
+    public static TreeSet<Tuple> fetchWithIndex(SQLTerm sqlTerm, String indexName) throws IOException, ClassNotFoundException {
         bplustree index = bplustree.deserialize(indexName);
         String operator = sqlTerm._strOperator;
-        HashSet <Tuple> result = new HashSet<>();
+        TreeSet <Tuple> result = new TreeSet<>();
         switch (operator){
             case "=":
                 result = fetchEqual(sqlTerm,index); break;
@@ -32,9 +32,9 @@ public class RecordsFetcher {
     }
 
     //helper for "=" operator using index
-    private static HashSet<Tuple> fetchEqual(SQLTerm sqlTerm,bplustree index) throws IOException, ClassNotFoundException {
+    private static TreeSet<Tuple> fetchEqual(SQLTerm sqlTerm,bplustree index) throws IOException, ClassNotFoundException {
         HashMap<String,Integer> map = index.search((Comparable) sqlTerm._objValue);
-        HashSet<Tuple> result = new HashSet<>();
+        TreeSet<Tuple> result = new TreeSet<>();
         for(String pageAddress : map.keySet()){
             Page page = Page.deserialize(pageAddress);
             Vector <Tuple> records = page.getRecords();
@@ -49,8 +49,8 @@ public class RecordsFetcher {
     }
 
     //helper for "=" operator without index
-    private static HashSet<Tuple> fetchEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException {
-        HashSet<Tuple> result = new HashSet<>();
+    private static TreeSet<Tuple> fetchEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException {
+        TreeSet<Tuple> result = new TreeSet<>();
         if(sqlTerm._strColumnName.equals(table.getClusteringKey())){
             PageInfo pageInfo = table.getTargetPageInfo((Comparable) sqlTerm._objValue);
             Page page = Page.deserialize(pageInfo.getPageAddress());
@@ -78,9 +78,9 @@ public class RecordsFetcher {
     }
 
     //helper for ">"/">=" operator using index
-    private static HashSet<Tuple> fetchGreaterThan(SQLTerm sqlTerm,bplustree index,boolean equals) throws IOException, ClassNotFoundException {
+    private static TreeSet<Tuple> fetchGreaterThan(SQLTerm sqlTerm,bplustree index,boolean equals) throws IOException, ClassNotFoundException {
         ArrayList<HashMap<String,Integer>> pages = index.searchGreaterThan((Comparable) sqlTerm._objValue,equals);
-        HashSet<Tuple> result = new HashSet<>();
+        TreeSet<Tuple> result = new TreeSet<>();
         int eq = equals ? -1 : 0;
             for(HashMap<String,Integer> map : pages){
                 for(String pageAddress : map.keySet()){
@@ -98,8 +98,8 @@ public class RecordsFetcher {
     }
 
     //helper for ">"/">=" operator without index
-    private static HashSet<Tuple> fetchGreaterThan(SQLTerm sqlTerm,Table table,boolean equals) throws IOException, ClassNotFoundException {
-        HashSet<Tuple> result = new HashSet<>();
+    private static TreeSet<Tuple> fetchGreaterThan(SQLTerm sqlTerm,Table table,boolean equals) throws IOException, ClassNotFoundException {
+        TreeSet<Tuple> result = new TreeSet<>();
         int eq = equals ? -1 : 0;
         int startIndex = 0;
         ArrayList<String> pages = table.getPagesAddresses();
@@ -122,9 +122,9 @@ public class RecordsFetcher {
     }
 
     //helper for "<"/"<=" operator using index
-    private static HashSet<Tuple> fetchLessThan(SQLTerm sqlTerm,bplustree index,boolean equals) throws IOException, ClassNotFoundException {
+    private static TreeSet<Tuple> fetchLessThan(SQLTerm sqlTerm,bplustree index,boolean equals) throws IOException, ClassNotFoundException {
         ArrayList<HashMap<String,Integer>> pages = index.searchLessThan((Comparable) sqlTerm._objValue,equals);
-        HashSet<Tuple> result = new HashSet<>();
+        TreeSet<Tuple> result = new TreeSet<>();
         int eq = equals ? 1 : 0;
         for(HashMap<String,Integer> map : pages){
             for(String pageAddress : map.keySet()){
@@ -142,8 +142,8 @@ public class RecordsFetcher {
     }
 
     //helper for "<"/"<=" operator without index
-    private static HashSet<Tuple> fetchLessThan(SQLTerm sqlTerm,Table table,boolean equals) throws IOException, ClassNotFoundException {
-        HashSet<Tuple> result = new HashSet<>();
+    private static TreeSet<Tuple> fetchLessThan(SQLTerm sqlTerm,Table table,boolean equals) throws IOException, ClassNotFoundException {
+        TreeSet<Tuple> result = new TreeSet<>();
         int eq = equals ? 1 : 0;
         boolean done = false;
         for(String pageAddress : table.getPagesAddresses()){
@@ -165,8 +165,8 @@ public class RecordsFetcher {
     }
 
     //helper for "!=" operator
-    private static HashSet<Tuple> fetchNotEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException {
-        HashSet<Tuple> result = new HashSet<>();
+    private static TreeSet<Tuple> fetchNotEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException {
+        TreeSet<Tuple> result = new TreeSet<>();
         for(String pageAddress : table.getPagesAddresses()){
             Page page = Page.deserialize(pageAddress);
             Vector <Tuple> records = page.getRecords();
@@ -180,8 +180,9 @@ public class RecordsFetcher {
         return result;
     }
 
-    public static HashSet<Tuple> fetchWithoutIndex(SQLTerm sqlTerm) throws IOException, ClassNotFoundException {
-        HashSet<Tuple> result = new HashSet<>();
+    public static TreeSet<Tuple> fetchWithoutIndex(SQLTerm sqlTerm) throws IOException, ClassNotFoundException {
+        TreeSet<Tuple> result = new TreeSet<>();
+        //TODO : validate the table name & sqlTerm parameters
         Table table = (Table) Table.deserialize(sqlTerm._strTableName);
         String operator = sqlTerm._strOperator;
 
