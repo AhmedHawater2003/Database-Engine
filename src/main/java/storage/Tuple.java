@@ -44,4 +44,12 @@ public class Tuple implements Serializable, Comparable<Tuple>  {
     public int compareTo(Tuple o) {
         return ((Comparable) content.get(clusteringKey)).compareTo(o.content.get(clusteringKey));
     }
+
+
+    public boolean equals(Tuple tuple) {
+        for(String key : content.keySet()) {
+            if(!content.get(key).equals(tuple.content.get(key))) return false;
+        }
+        return true;
+    }
 }
