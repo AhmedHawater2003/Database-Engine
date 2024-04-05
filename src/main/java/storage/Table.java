@@ -12,8 +12,11 @@ public class Table implements Serializable {
 
     private int latestPageIndex = 0;
     private String tableName;
+
+
     private TreeSet<PageInfo> pagesInfo;
     private String clusteringKey;
+
 
 
     private void initTableMetaData(Hashtable<String, String> colNameType) throws IOException {
@@ -40,9 +43,6 @@ public class Table implements Serializable {
         return tableName;
     }
 
-//    public TreeMap<Comparable, String> getPages() {
-//        return pagesAddresses;
-//    }
 
     public String getClusteringKey() {
         return clusteringKey;
@@ -71,6 +71,9 @@ public class Table implements Serializable {
         pagesInfo.remove(oldPageInfo);
         newMinKey = (newMinKey.compareTo(oldPageInfo.getMinKey()) < 0) ? newMinKey : oldPageInfo.getMinKey();
         pagesInfo.add(new PageInfo(oldPageInfo.getPageAddress(), newMinKey));
+    }
+    public void updatePageInfoMinKey(String pageAddress , Comparable oldMinKey, Comparable newMinKey) {
+        updatePageInfoMinKey(new PageInfo(pageAddress, oldMinKey), newMinKey);
     }
 
     public boolean isEmpty() {
@@ -101,4 +104,8 @@ public class Table implements Serializable {
         fileIn.close();
         return table;
     }
+    public void deletePage(String pageAddress, Comparable minKey) {
+        pagesInfo.remove(new PageInfo(pageAddress, minKey));
+    }
+
 }
