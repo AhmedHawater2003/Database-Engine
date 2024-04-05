@@ -361,7 +361,8 @@ public class DBApp {
             if (targetPageInfo != null) {
                 Page targetPage = Page.deserialize(targetPageInfo.getPageAddress());
                 Tuple temp = targetPage.getRecords().firstElement();
-                for (Tuple tuple : targetPage.getRecords()) {
+                List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
+                for (Tuple tuple : tempRecords) {
                     boolean satisfied = true;
                     for (String column : htblColNameValue.keySet()) {
                         if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
@@ -382,7 +383,7 @@ public class DBApp {
                         targetPage.serialize(targetPageInfo.getPageAddress());
                     else {
                         //To delete page from disk
-                        File file = new File("serialized/pages/" + targetPageInfo.getPageAddress() + ".class");
+                        File file = new File(targetPageInfo.getPageAddress());
                         file.delete();
                         //Deleting page from the table object
                         table.deletePage(targetPageInfo.getPageAddress(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
@@ -487,7 +488,7 @@ public class DBApp {
         try {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
-//
+
 //            Hashtable htblColNameType = new Hashtable();
 //            htblColNameType.put("id", "java.lang.Integer");
 //            htblColNameType.put("name", "java.lang.String");
@@ -495,7 +496,7 @@ public class DBApp {
 //            dbApp.createTable(strTableName, "id", htblColNameType);
 //            dbApp.createIndex(strTableName, "gpa", "gpaIndex");
 //
-//            Hashtable htblColNameValue = new Hashtable();
+            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 1);
 //            htblColNameValue.put("name","Ahmed Noor");
 //            htblColNameValue.put("gpa", 0.95);
@@ -514,16 +515,29 @@ public class DBApp {
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //            htblColNameValue.clear();
+//            htblColNameValue.put("id", 5);
+//            htblColNameValue.put("name","Zaky Noor");
+//            htblColNameValue.put("gpa", 0.88);
+//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//
+//
+//            htblColNameValue.clear();
 //            htblColNameValue.put("id", 4);
 //            htblColNameValue.put("name", "John Noor");
 //            htblColNameValue.put("gpa", 1.5);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 5);
-//            htblColNameValue.put("name","Zaky Noor");
-//            htblColNameValue.put("gpa", 0.88);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//            htblColNameValue.put("id", 3);
+//
+//
+//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//
+            var dalia = bplustree.deserialize("gpaIndex");
+//
+//            System.out.println(Page.deserialize("serialized/pages/Student3.class"));
+//            System.out.println(Page.deserialize("serialized/pages/Student4.class"));
+
 
 
             app.SQLTerm[] arrSQLTerms;
