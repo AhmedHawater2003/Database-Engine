@@ -1003,10 +1003,15 @@ public class bplustree implements Serializable {
 		public void delete(int index) {
 
 			// Delete dictionary pair from leaf
-			this.dictionary[index] = null;
+			// DANGER ! Fuck original implementation
+//			this.dictionary[index] = null;
 
+			for(int i = index; i<numPairs-1;i++){
+				this.dictionary[i] = this.dictionary[i+1];
+			}
 			// Decrement numPairs
 			numPairs--;
+			this.dictionary[numPairs] = null;
 		}
 
 		/**
