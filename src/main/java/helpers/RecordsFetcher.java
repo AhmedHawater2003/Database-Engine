@@ -1,6 +1,7 @@
 package helpers;
 
 import app.SQLTerm;
+import exceptions.DBAppException;
 import storage.*;
 
 import java.io.IOException;
@@ -9,8 +10,8 @@ import java.util.*;
 
 public class RecordsFetcher {
 
-    public static TreeSet<Tuple> fetchWithIndex(SQLTerm sqlTerm, String indexName) throws IOException, ClassNotFoundException {
-        bplustree index = bplustree.deserialize(indexName);
+    public static TreeSet<Tuple> fetchWithIndex(SQLTerm sqlTerm, String indexName) throws IOException, ClassNotFoundException, DBAppException {
+        bplustree index = bplustree.deserialize(indexName,sqlTerm._strTableName);
         String operator = sqlTerm._strOperator;
         TreeSet <Tuple> result = new TreeSet<>();
         switch (operator){
@@ -27,7 +28,7 @@ public class RecordsFetcher {
             case "!=":
                 result = fetchWithoutIndex(sqlTerm);
         }
-        index.serialize(indexName);
+        index.serialize(indexName,sqlTerm._strTableName);
         return result;
     }
 
@@ -49,19 +50,15 @@ public class RecordsFetcher {
     }
 
     //helper for "=" operator without index
-    private static TreeSet<Tuple> fetchEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException {
+    private static TreeSet<Tuple> fetchEqual(SQLTerm sqlTerm,Table table) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         if(sqlTerm._strColumnName.equals(table.getClusteringKey())){
             PageInfo pageInfo = table.getTargetPageInfo((Comparable) sqlTerm._objValue);
-            Page page = Page.deserialize(pageInfo.getPageAddress());
-            Vector <Tuple> records = page.getRecords();
-            for(Tuple record : records){
-                if(record.getContent().get(sqlTerm._strColumnName).equals(sqlTerm._objValue)) {
-                    result.add(record);
-                    break; //there can't be duplicates in the clustering key
-                }
+            if(pageInfo != null) {
+                Page page = Page.deserialize(pageInfo.getPageAddress());
+                result.add(page.getRecordBS(table.getClusteringKey(), (Comparable) sqlTerm._objValue));
+                page.serialize(pageInfo.getPageAddress());
             }
-            page.serialize(pageInfo.getPageAddress());
             return result;
         }
         for(String pageAddress : table.getPagesAddresses()){
@@ -180,7 +177,7 @@ public class RecordsFetcher {
         return result;
     }
 
-    public static TreeSet<Tuple> fetchWithoutIndex(SQLTerm sqlTerm) throws IOException, ClassNotFoundException {
+    public static TreeSet<Tuple> fetchWithoutIndex(SQLTerm sqlTerm) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         //TODO : validate the table name & sqlTerm parameters
         Table table = (Table) Table.deserialize(sqlTerm._strTableName);

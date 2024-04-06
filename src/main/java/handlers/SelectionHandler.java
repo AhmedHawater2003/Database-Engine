@@ -24,7 +24,7 @@ public class SelectionHandler {
                         strings -> !strings[MetaDataColumns.INDEX_NAME.ordinal()].equals("null"), false).get(0);
     }
 
-    public TreeSet<Tuple> process(SQLTerm term) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> process(SQLTerm term) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         if (indexColumns.contains(term._strColumnName))
             result = RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName);
@@ -104,7 +104,7 @@ public class SelectionHandler {
         return false;
     }
 
-    public TreeSet<Tuple> processOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> processOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {
@@ -117,7 +117,7 @@ public class SelectionHandler {
         return result;
     }
 
-    public TreeSet<Tuple> processXOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> processXOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {

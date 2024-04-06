@@ -753,11 +753,11 @@ public class bplustree implements Serializable {
 		return search(min,upperBound,true,inclusive);
 	}
 
-	public void serialize(String stringPath){
+	public void serialize(String indexName, String tableName){
 
 		try {
 			// Create an output stream for the file where the object will be stored
-			FileOutputStream fileOut = new FileOutputStream("serialized/indices/"+stringPath+".class");
+			FileOutputStream fileOut = new FileOutputStream("serialized/indices/"+tableName+"_"+indexName+".class");
 			ObjectOutputStream out = new ObjectOutputStream(fileOut);
 
 			// Write the mySambosa object to the output stream
@@ -772,11 +772,11 @@ public class bplustree implements Serializable {
 			i.printStackTrace();
 		}
 	}
-	public static bplustree deserialize(String stringPath){
+	public static bplustree deserialize(String indexName, String tableName){
 		bplustree e = null;
 		try {
 			// Create a new file input stream for the specified file
-			FileInputStream fileIn = new FileInputStream("serialized/Indices/"+stringPath+".class");
+			FileInputStream fileIn = new FileInputStream("serialized/Indices/"+tableName+"_"+indexName+".class");
 
 			// Create a new object input stream for the file
 			ObjectInputStream in = new ObjectInputStream(fileIn);

@@ -163,7 +163,7 @@ public class DBApp {
                 }
             }
         }
-        index.serialize(strIndexName);
+        index.serialize(strIndexName,strTableName);
     }
 
     // following method inserts one row only.
@@ -179,7 +179,7 @@ public class DBApp {
         List<String> columnNames = columnsWithIndex.get(0);
         List<String> indexNames = columnsWithIndex.get(1);
         for (String indexName : indexNames) {
-            indices.add(bplustree.deserialize(indexName));
+            indices.add(bplustree.deserialize(indexName, strTableName));
         }
 
         Table table = Table.deserialize(strTableName);
@@ -211,7 +211,7 @@ public class DBApp {
         targetPage.serialize(targetPageInfo.getPageAddress());
         table.serialize();
         for(int i=0;i<indices.size();i++){
-            indices.get(i).serialize(indexNames.get(i));
+            indices.get(i).serialize(indexNames.get(i),strTableName);
         }
 
     }
@@ -283,11 +283,11 @@ public class DBApp {
         }
         for(String colName : columnNames){
             if(htblColNameValue.containsKey(colName)){
-                bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)));
+                bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)),strTableName);
                 indexNames.remove(columnNames.indexOf(colName));
                 columnNamesClone.remove(colName);
                 deleteWithIndex(htblColNameValue,index,indexNames,colName,columnNamesClone,strTableName);
-                index.serialize(columnsWithIndex.get(1).get(columnsWithIndex.get(0).indexOf(colName)));
+                index.serialize(columnsWithIndex.get(1).get(columnsWithIndex.get(0).indexOf(colName)),strTableName);
                 return;
             }
         }
@@ -315,7 +315,7 @@ public class DBApp {
                     page.delete(tuple);
                     if (!deserializeFlag) {
                         for (String indexName : indexNames) {
-                            indices.add(bplustree.deserialize(indexName));
+                            indices.add(bplustree.deserialize(indexName, tableName));
                         }
                         indices.add(index);
                         columnNames.add(colName);
@@ -346,49 +346,49 @@ public class DBApp {
             }
         }
         for(int i=0;i<indices.size()-1;i++){
-            indices.get(i).serialize(indexNames.get(i));
+            indices.get(i).serialize(indexNames.get(i),tableName);
         }
     }
 
-    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, String tableName,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException {
+    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, String tableName,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
         Table table = Table.deserialize(tableName);
         ArrayList<bplustree> indices = new ArrayList<>();
         for (String indexName : columnsWithIndex.get(1)) {
-            indices.add(bplustree.deserialize(indexName));
+            indices.add(bplustree.deserialize(indexName, tableName));
         }
         if (htblColNameValue.containsKey(table.getClusteringKey())) {
             PageInfo targetPageInfo = table.getTargetPageInfo((Comparable) htblColNameValue.get(table.getClusteringKey()));
             if (targetPageInfo != null) {
+                boolean satisfied = true;
                 Page targetPage = Page.deserialize(targetPageInfo.getPageAddress());
                 Tuple temp = targetPage.getRecords().firstElement();
                 List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
-                for (Tuple tuple : tempRecords) {
-                    boolean satisfied = true;
-                    for (String column : htblColNameValue.keySet()) {
+                Tuple tuple = targetPage.getRecordBS(table.getClusteringKey(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
+                for (String column : htblColNameValue.keySet()) {
                         if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
                             satisfied = false;
                             break;
                         }
-                    }
-                    if (satisfied) {
-                        targetPage.delete(tuple);
-                        deleteFromIndices(indices, columnsWithIndex.get(0), tuple, targetPageInfo.getPageAddress());
-                        if (tuple.equals(temp) && !targetPage.isEmpty()) {
-                            Comparable newMinKey = targetPage.getRecords().firstElement().getClusteringKeyValue();
-                            table.updatePageInfoMinKey(targetPageInfo, newMinKey);
+                }
+                if(satisfied){
+                    targetPage.delete(tuple);
+                    deleteFromIndices(indices, columnsWithIndex.get(0), tuple, targetPageInfo.getPageAddress());
+                    if (tuple.equals(temp) && !targetPage.isEmpty()) {
+                        Comparable newMinKey = targetPage.getRecords().firstElement().getClusteringKeyValue();
+                        table.updatePageInfoMinKey(targetPageInfo, newMinKey);
 
-                        }
-                    }
-                    if (!targetPage.isEmpty())
-                        targetPage.serialize(targetPageInfo.getPageAddress());
-                    else {
-                        //To delete page from disk
-                        File file = new File(targetPageInfo.getPageAddress());
-                        file.delete();
-                        //Deleting page from the table object
-                        table.deletePage(targetPageInfo.getPageAddress(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
                     }
                 }
+                if (!targetPage.isEmpty())
+                        targetPage.serialize(targetPageInfo.getPageAddress());
+                else {
+                    //To delete page from disk
+                    File file = new File(targetPageInfo.getPageAddress());
+                    file.delete();
+                    //Deleting page from the table object
+                    table.deletePage(targetPageInfo.getPageAddress(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
+                }
+
             } else {
                 ArrayList<String> pageAddresses = table.getPagesAddresses();
                 for(String pageAddress : pageAddresses){
@@ -425,7 +425,7 @@ public class DBApp {
                 }
             }
             for(int i=0;i<indices.size();i++){
-                indices.get(i).serialize(columnsWithIndex.get(1).get(i));
+                indices.get(i).serialize(columnsWithIndex.get(1).get(i),tableName);
             }
             table.serialize();
         }
@@ -444,36 +444,36 @@ public class DBApp {
         Stack<SQLOperator> operators = new Stack<>();
 
         operands.push(arrSQLTerms[0]);
-
-        for(int i=1;i< arrSQLTerms.length;i++){
-            SQLOperator operator=SQLOperator.valueOf(strarrOperators[i-1]);
-            if(!operators.isEmpty() && operators.peek().compareTo(operator)<0){
-                SQLOperator topOperator = operators.peek();
-                while(!operators.isEmpty() && topOperator.compareTo(operator)<0){
-                    ArrayList<Object> tempOperands = new ArrayList<>();
-                    tempOperands.add(operands.pop());
-                    while(!operators.isEmpty() && operators.peek().compareTo(topOperator)==0){
+        if(strarrOperators.length!=0) {
+            for (int i = 1; i < arrSQLTerms.length; i++) {
+                SQLOperator operator = SQLOperator.valueOf(strarrOperators[i - 1]);
+                if (!operators.isEmpty() && operators.peek().compareTo(operator) < 0) {
+                    SQLOperator topOperator = operators.peek();
+                    while (!operators.isEmpty() && topOperator.compareTo(operator) < 0) {
+                        ArrayList<Object> tempOperands = new ArrayList<>();
                         tempOperands.add(operands.pop());
-                        operators.pop();
+                        while (!operators.isEmpty() && operators.peek().compareTo(topOperator) == 0) {
+                            tempOperands.add(operands.pop());
+                            operators.pop();
+                        }
+                        operands.push(selectionHandler.process(tempOperands, topOperator));
                     }
-                    operands.push(selectionHandler.process(tempOperands,topOperator));
-                }
-                operators.push(operator);
+                    operators.push(operator);
+                } else operators.push(operator);
+                operands.push(arrSQLTerms[i]);
             }
-            else operators.push(operator);
-            operands.push(arrSQLTerms[i]);
-        }
 
 
-        while(!operators.isEmpty()){
-            ArrayList<Object> tempOperands = new ArrayList<>();
-            SQLOperator topOperator = operators.peek();
-            tempOperands.add(operands.pop());
-            while(!operators.isEmpty() && operators.peek().compareTo(topOperator)==0){
+            while (!operators.isEmpty()) {
+                ArrayList<Object> tempOperands = new ArrayList<>();
+                SQLOperator topOperator = operators.peek();
                 tempOperands.add(operands.pop());
-                operators.pop();
+                while (!operators.isEmpty() && operators.peek().compareTo(topOperator) == 0) {
+                    tempOperands.add(operands.pop());
+                    operators.pop();
+                }
+                operands.push(selectionHandler.process(tempOperands, topOperator));
             }
-            operands.push(selectionHandler.process(tempOperands,topOperator));
         }
 
         Object result=operands.pop();
@@ -495,8 +495,8 @@ public class DBApp {
 //            htblColNameType.put("gpa", "java.lang.double");
 //            dbApp.createTable(strTableName, "id", htblColNameType);
 //            dbApp.createIndex(strTableName, "gpa", "gpaIndex");
-//
-            Hashtable htblColNameValue = new Hashtable();
+////
+//            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 1);
 //            htblColNameValue.put("name","Ahmed Noor");
 //            htblColNameValue.put("gpa", 0.95);
@@ -533,7 +533,7 @@ public class DBApp {
 //
 //            dbApp.deleteFromTable(strTableName, htblColNameValue);
 //
-            var dalia = bplustree.deserialize("gpaIndex");
+//            var dalia = bplustree.deserialize("gpaIndex");
 //
 //            System.out.println(Page.deserialize("serialized/pages/Student3.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student4.class"));
@@ -550,21 +550,21 @@ public class DBApp {
             arrSQLTerms[0]._strOperator = "=";
             arrSQLTerms[0]._objValue = 0.95;
 
-            arrSQLTerms[1]._strTableName = "Student";
-            arrSQLTerms[1]._strColumnName = "name";
-            arrSQLTerms[1]._strOperator = "=";
-            arrSQLTerms[1]._objValue = "Ahmed Noor";
+//            arrSQLTerms[1]._strTableName = "Student";
+//            arrSQLTerms[1]._strColumnName = "name";
+//            arrSQLTerms[1]._strOperator = "=";
+//            arrSQLTerms[1]._objValue = "Ahmed Noor";
+//
+//            arrSQLTerms[2]._strTableName = "Student";
+//            arrSQLTerms[2]._strColumnName = "id";
+//            arrSQLTerms[2]._strOperator = "=";
+//            arrSQLTerms[2]._objValue = 3;
 
-            arrSQLTerms[2]._strTableName = "Student";
-            arrSQLTerms[2]._strColumnName = "id";
-            arrSQLTerms[2]._strOperator = "=";
-            arrSQLTerms[2]._objValue = 3;
 
 
-
-            String[] strarrOperators = new String[2];
-            strarrOperators[0] = "AND";
-            strarrOperators[1] = "OR";
+            String[] strarrOperators = new String[0];
+//            strarrOperators[0] = "AND";
+//            strarrOperators[1] = "OR";
             // select * from Student where name = "John Noor" or gpa = 1.5;
             Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
             while (resultSet.hasNext()) {
