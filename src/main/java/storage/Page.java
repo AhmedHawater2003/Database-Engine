@@ -2,6 +2,7 @@ package storage;
 
 import java.io.*;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.Vector;
 import helpers.ConfigReader;
 import exceptions.DBAppException;
@@ -56,6 +57,15 @@ public class Page implements Serializable {
             out.append(record).append("\n");
         }
         return out.toString();
+    }
+
+    public Tuple getRecordBS(String clustringKeyName,Comparable key) throws DBAppException {
+        Hashtable<String, Object> temp = new Hashtable<>();
+        temp.put(clustringKeyName, key);
+        Tuple dummy = new Tuple(temp,clustringKeyName);
+        int idx=Collections.binarySearch(records, dummy);
+        if(idx<0) throw new DBAppException("Record not found");
+        return records.get(idx);
     }
 
     public void serialize(String path) throws IOException {
