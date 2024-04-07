@@ -59,6 +59,15 @@ public class Page implements Serializable {
         return out.toString();
     }
 
+    public Tuple getRecordBS(String clustringKeyName,Comparable key) throws DBAppException {
+        Hashtable<String, Object> temp = new Hashtable<>();
+        temp.put(clustringKeyName, key);
+        Tuple dummy = new Tuple(temp,clustringKeyName);
+        int idx=Collections.binarySearch(records, dummy);
+        if(idx<0) throw new DBAppException("Record not found");
+        return records.get(idx);
+    }
+
     public void serialize(String path) throws IOException {
         FileOutputStream fileOut = new FileOutputStream(path);
         ObjectOutputStream out = new ObjectOutputStream(fileOut);
@@ -76,13 +85,6 @@ public class Page implements Serializable {
     }
 
 
-    public Tuple getRecordBS(String clustringKeyName,Comparable key) throws DBAppException {
-        Hashtable<String, Object> temp = new Hashtable<>();
-        temp.put(clustringKeyName, key);
-        Tuple dummy = new Tuple(temp,clustringKeyName);
-        int idx=Collections.binarySearch(records, dummy);
-        if(idx<0) throw new DBAppException("Record not found");
-        return records.get(idx);
-    }
+
 
 }
