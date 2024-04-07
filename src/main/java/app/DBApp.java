@@ -54,9 +54,7 @@ public class DBApp {
     // be passed in htblColNameType
     // htblColNameValue will have the column name as key and the data
     // type as value
-    public void createTable(String strTableName,
-                            String strClusteringKeyColumn,
-                            Hashtable<String, String> htblColNameType) throws DBAppException, IOException {
+    public void createTable(String strTableName, String strClusteringKeyColumn, Hashtable<String, String> htblColNameType) throws DBAppException, IOException {
 
         if (MetaDataManger.getInstance().exists(MetaDataColumns.TABLE_NAME, strTableName)) {
             throw new DBAppException("Table already exists");
@@ -68,54 +66,50 @@ public class DBApp {
 
 
     // following method creates a B+tree index
-    public void createIndex(String strTableName,
-                            String strColName,
-                            String strIndexName) throws DBAppException, IOException, ClassNotFoundException {
+    public void createIndex(String strTableName, String strColName, String strIndexName) throws DBAppException, IOException, ClassNotFoundException {
         String targetline = "";
         String editedline = "";
         //check that the table exists with the correct naming
 
 
-            FileReader filereader = new FileReader("resources/metadata.csv");
-            boolean tableFound = false, columnFound = false, indexValid = false;
+        FileReader filereader = new FileReader("resources/metadata.csv");
+        boolean tableFound = false, columnFound = false, indexValid = false;
 
 
-            CSVReader csvReader = new CSVReader(filereader);
-            String[] nextRecord;
+        CSVReader csvReader = new CSVReader(filereader);
+        String[] nextRecord;
 
 
-            while ((nextRecord = csvReader.readNext()) != null) {
+        while ((nextRecord = csvReader.readNext()) != null) {
 
-                if (nextRecord[0].equals(strTableName)) {
-                    tableFound = true;
-                    if (nextRecord[1].equals(strColName)) {
-                        columnFound = true;
-                        if (nextRecord[4].equals("null")) {
-                            indexValid = true;
-                            //edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
-                            targetline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
-                            nextRecord[4] = strIndexName;
-                            nextRecord[5] = "B+tree";
-                            editedline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
-                            // write to the actual csv file
+            if (nextRecord[0].equals(strTableName)) {
+                tableFound = true;
+                if (nextRecord[1].equals(strColName)) {
+                    columnFound = true;
+                    if (nextRecord[4].equals("null")) {
+                        indexValid = true;
+                        //edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
+                        targetline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                        nextRecord[4] = strIndexName;
+                        nextRecord[5] = "B+tree";
+                        editedline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                        // write to the actual csv file
 
 
-                            break;
-                        }
+                        break;
                     }
                 }
             }
-            csvReader.close();
-            if (!tableFound) {
-                throw new DBAppException("Table Not Found!");
-            } else if (!columnFound) {
-                throw new DBAppException("Column Not Found!");
+        }
+        csvReader.close();
+        if (!tableFound) {
+            throw new DBAppException("Table Not Found!");
+        } else if (!columnFound) {
+            throw new DBAppException("Column Not Found!");
 
-            } else if (!indexValid) {
-                throw new DBAppException("There is already an Index on this column");
-            }
-
-
+        } else if (!indexValid) {
+            throw new DBAppException("There is already an Index on this column");
+        }
 
 
         Table myTable = (Table) Table.deserialize(strTableName);
@@ -163,13 +157,12 @@ public class DBApp {
                 }
             }
         }
-        index.serialize(strIndexName,strTableName);
+        index.serialize(strIndexName, strTableName);
     }
 
     // following method inserts one row only.
     // htblColNameValue must include a value for the primary key
-    public void insertIntoTable(String strTableName,
-                                Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
+    public void insertIntoTable(String strTableName, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
         // !TODO validate inserted table content is compatible with the desired table
         // !TODO update the coresponding indicies
@@ -196,57 +189,54 @@ public class DBApp {
         while (targetPageInfo != null) {
             targetPage = Page.deserialize(targetPageInfo.getPageAddress());
             if (!targetPage.isFull()) break;
-            tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple ,columnNames,indices);
+            tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple, columnNames, indices);
             targetPageInfo = table.getNextPageInfo(targetPageInfo);
         }
 
         if (targetPageInfo == null) {
             targetPage = table.createNewPage(tuple.getClusteringKeyValue());
             targetPageInfo = table.getTargetPageInfo(tuple.getClusteringKeyValue());
-        } else
-            targetPage = Page.deserialize(targetPageInfo.getPageAddress());
+        } else targetPage = Page.deserialize(targetPageInfo.getPageAddress());
 
-        insertIntoIndices(indices,columnNames,tuple,targetPageInfo.getPageAddress());
+        insertIntoIndices(indices, columnNames, tuple, targetPageInfo.getPageAddress());
         targetPage.insert(tuple);
         targetPage.serialize(targetPageInfo.getPageAddress());
         table.serialize();
-        for(int i=0;i<indices.size();i++){
-            indices.get(i).serialize(indexNames.get(i),strTableName);
+        for (int i = 0; i < indices.size(); i++) {
+            indices.get(i).serialize(indexNames.get(i), strTableName);
         }
 
     }
 
 
-
-    public Tuple insertIntoFullPage(Table table, PageInfo pageInfo, Page page, Tuple tuple,List<String> columnNames,ArrayList<bplustree> indices)
-            throws DBAppException, IOException {
+    public Tuple insertIntoFullPage(Table table, PageInfo pageInfo, Page page, Tuple tuple, List<String> columnNames, ArrayList<bplustree> indices) throws DBAppException, IOException {
 //        we need to update the index from the old index and update to the new index
         if (page.getRecords().lastElement().compareTo(tuple) > 0) {
             //delete from the old index
-            insertIntoIndices(indices,columnNames,tuple,pageInfo.getPageAddress());
+            insertIntoIndices(indices, columnNames, tuple, pageInfo.getPageAddress());
             table.updatePageInfoMinKey(pageInfo, tuple.getClusteringKeyValue());
             tuple = page.swapRecords(tuple.clone(), page.getRecords().size() - 1);
-            deleteFromIndices(indices,columnNames,tuple,pageInfo.getPageAddress());
+            deleteFromIndices(indices, columnNames, tuple, pageInfo.getPageAddress());
             page.serialize(pageInfo.getPageAddress());
         }
         return tuple;
     }
 
-    private void insertIntoIndices(ArrayList<bplustree> indices, List<String> columnNames , Tuple record ,String pageAddress){
+    private void insertIntoIndices(ArrayList<bplustree> indices, List<String> columnNames, Tuple record, String pageAddress) {
         for (int i = 0; i < indices.size(); i++) {
             bplustree index = indices.get(i);
             String columnName = columnNames.get(i);
             Hashtable<String, Object> content = record.getContent();
-            index.insert((Comparable) content.get(columnName),pageAddress);
+            index.insert((Comparable) content.get(columnName), pageAddress);
         }
     }
 
-    private void deleteFromIndices(ArrayList<bplustree> indices, List<String> columnNames , Tuple record ,String pageAddress){
+    private void deleteFromIndices(ArrayList<bplustree> indices, List<String> columnNames, Tuple record, String pageAddress) {
         for (int i = 0; i < indices.size(); i++) {
             bplustree index = indices.get(i);
             String columnName = columnNames.get(i);
             Hashtable<String, Object> content = record.getContent();
-            index.deleteFromPage((Comparable) content.get(columnName),pageAddress);
+            index.deleteFromPage((Comparable) content.get(columnName), pageAddress);
         }
     }
 
@@ -254,42 +244,47 @@ public class DBApp {
     // htblColNameValue holds the key and new value
     // htblColNameValue will not include clustering key as column name
     // strClusteringKeyValue is the value to look for to find the row to update.
-    public void updateTable(String strTableName,
-                            String strClusteringKeyValue,
-                            Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
+    public void updateTable(String strTableName, String strClusteringKeyValue, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
+
 
         Table table = Table.deserialize(strTableName);
-        List<String> indexedColumns = MetaDataManger.getInstance().
-                readTableInfo(strTableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_NAME},
-                        strings -> !strings[MetaDataColumns.INDEX_NAME.ordinal()].equals("null"), false).get(0);
 
-        Comparable castedValue=getCastedClustreringKeyValue(strTableName,strClusteringKeyValue);
+        HashMap<String, String> columnNames = new HashMap<>();
+        List<List<String>> columnsWithIndiciesL = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
+        for (int i = 0; i < columnsWithIndicies.get(0).size(); i++) {
+            columnNames.put(columnsWithIndicies.get(0).get(i), columnsWithIndicies.get(1).get(i));
+        }
+
+        Comparable castedValue = getCastedClustreringKeyValue(strTableName, strClusteringKeyValue);
 
         PageInfo pageInfo = table.getTargetPageInfo(castedValue);
         Page targetPage = Page.deserialize(pageInfo.getPageAddress());
 
-        Tuple targetTuple=targetPage.getRecordBS(table.getClusteringKey(),castedValue);
-        Hashtable<String, Object> content=targetTuple.getContent();
+        Tuple targetTuple = targetPage.getRecordBS(table.getClusteringKey(), castedValue);
+        Hashtable<String, Object> content = targetTuple.getContent();
 
-        for (String key : htblColNameValue.keySet()){
+        for (String key : columnNames.keySet()) {
+
+            String indexedColumnName = indexedColumns.get(key);
+
             Comparable oldValue = (Comparable) content.get(key);
             content.put(key, htblColNameValue.get(key));
 
-            if(indexedColumns.contains(key)){
-                bplustree index = bplustree.deserialize(indexedColumnsName,strTableName);
-                index.deleteFromPage(oldValue,pageInfo.getPageAddress());
+            if (!indexedColumnName.equals("null")) {
+                bplustree index = bplustree.deserialize(indexedColumnName, strTableName);
+                index.deleteFromPage(oldValue, pageInfo.getPageAddress());
                 index.insert((Comparable) content.get(key), pageInfo.getPageAddress());
-                index.serialize(indexedColumnsName,strTableName);
+
+                index.serialize(indexedColumnName, strTableName);
             }
         }
+
         targetPage.serialize(pageInfo.getPageAddress());
 
     }
 
-    public Comparable getCastedClustreringKeyValue(String tableName,String clusteringKeyValue) throws IOException {
-        String clusteringKeyType = MetaDataManger.getInstance().readTableInfo(tableName,
-                new MetaDataColumns[]{MetaDataColumns.COLUMN_TYPE},
-                strings -> strings[MetaDataColumns.IS_CLUSTERING_KEY.ordinal()].equals("True"), false).get(0).get(0);
+    public Comparable getCastedClustreringKeyValue(String tableName, String clusteringKeyValue) throws IOException {
+        String clusteringKeyType = MetaDataManger.getInstance().readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_TYPE}, strings -> strings[MetaDataColumns.IS_CLUSTERING_KEY.ordinal()].equals("True"), false).get(0).get(0);
 
         switch (clusteringKeyType) {
             case "java.lang.Integer":
@@ -298,7 +293,8 @@ public class DBApp {
                 return Double.parseDouble(clusteringKeyValue);
             case "java.lang.String":
                 return clusteringKeyValue;
-            default: return null;
+            default:
+                return null;
         }
     }
 
@@ -306,8 +302,7 @@ public class DBApp {
     // htblColNameValue holds the key and value. This will be used in search
     // to identify which rows/tuples to delete.
     // htblColNameValue enteries are ANDED together
-    public void deleteFromTable(String strTableName,
-                                Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
+    public void deleteFromTable(String strTableName, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
         //make sure when deleting a ceratin tuple check if there is any index on another column and if there is go and deserialize this bplus tree and call delete with the
         //page of the tuple being deleted
 
@@ -318,39 +313,39 @@ public class DBApp {
         List<String> columnNamesClone = new ArrayList<>();
         List<String> indexNames = columnsWithIndex.get(1);
         List<String> columnNames = columnsWithIndex.get(0);
-        for(String columnName : columnNames){
+        for (String columnName : columnNames) {
             columnNamesClone.add(columnName);
         }
-        for(String colName : columnNames){
-            if(htblColNameValue.containsKey(colName)){
-                bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)),strTableName);
+        for (String colName : columnNames) {
+            if (htblColNameValue.containsKey(colName)) {
+                bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)), strTableName);
                 indexNames.remove(columnNames.indexOf(colName));
                 columnNamesClone.remove(colName);
-                deleteWithIndex(htblColNameValue,index,indexNames,colName,columnNamesClone,strTableName);
-                index.serialize(columnsWithIndex.get(1).get(columnsWithIndex.get(0).indexOf(colName)),strTableName);
+                deleteWithIndex(htblColNameValue, index, indexNames, colName, columnNamesClone, strTableName);
+                index.serialize(columnsWithIndex.get(1).get(columnsWithIndex.get(0).indexOf(colName)), strTableName);
                 return;
             }
         }
-        deleteWithoutIndex(htblColNameValue,strTableName,columnsWithIndex);
+        deleteWithoutIndex(htblColNameValue, strTableName, columnsWithIndex);
     }
 
-    private void deleteWithIndex(Hashtable<String, Object> htblColNameValue, bplustree index,List<String> indexNames, String colName, List<String> columnNames,String tableName) throws IOException, ClassNotFoundException {
+    private void deleteWithIndex(Hashtable<String, Object> htblColNameValue, bplustree index, List<String> indexNames, String colName, List<String> columnNames, String tableName) throws IOException, ClassNotFoundException {
         ArrayList<bplustree> indices = new ArrayList<>();
         boolean deserializeFlag = false;
         Comparable minKey = null;
-        HashMap<String,Integer> map = index.search((Comparable) htblColNameValue.get(colName));
-        for(String pageAddress : map.keySet()){
+        HashMap<String, Integer> map = index.search((Comparable) htblColNameValue.get(colName));
+        for (String pageAddress : map.keySet()) {
             Page page = Page.deserialize(pageAddress);
             Vector<Tuple> records = (Vector<Tuple>) page.getRecords().clone();
-            for(Tuple tuple : records){
+            for (Tuple tuple : records) {
                 boolean satisfied = true;
-                for(String column : htblColNameValue.keySet()) {
+                for (String column : htblColNameValue.keySet()) {
                     if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
                         satisfied = false;
                         break;
                     }
                 }
-                if(satisfied) {
+                if (satisfied) {
                     Tuple temp = page.getRecords().firstElement();
                     page.delete(tuple);
                     if (!deserializeFlag) {
@@ -361,36 +356,35 @@ public class DBApp {
                         columnNames.add(colName);
                         deserializeFlag = true;
                     }
-                    deleteFromIndices(indices,columnNames,tuple,pageAddress);
+                    deleteFromIndices(indices, columnNames, tuple, pageAddress);
                     minKey = tuple.getClusteringKeyValue();
-                    if(tuple.equals(temp) && !page.getRecords().isEmpty()){
+                    if (tuple.equals(temp) && !page.getRecords().isEmpty()) {
                         Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
                         Comparable oldMinKey = temp.getClusteringKeyValue();
                         Table table = Table.deserialize(tableName);
-                        table.updatePageInfoMinKey(pageAddress,oldMinKey,newMinKey);
+                        table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
                         table.serialize();
                     }
                 }
             }
-            if(!page.isEmpty())
-                page.serialize(pageAddress);
-            else{
+            if (!page.isEmpty()) page.serialize(pageAddress);
+            else {
                 //To delete page from disk
                 System.out.println(pageAddress);
-                File file = new File("serialized/pages/"+pageAddress+".class");
+                File file = new File("serialized/pages/" + pageAddress + ".class");
                 file.delete();
-               //Deleting page from the table object
+                //Deleting page from the table object
                 Table table = Table.deserialize(tableName);
-                table.deletePage(pageAddress,minKey);
+                table.deletePage(pageAddress, minKey);
                 table.serialize();
             }
         }
-        for(int i=0;i<indices.size()-1;i++){
-            indices.get(i).serialize(indexNames.get(i),tableName);
+        for (int i = 0; i < indices.size() - 1; i++) {
+            indices.get(i).serialize(indexNames.get(i), tableName);
         }
     }
 
-    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, String tableName,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
+    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, String tableName, List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
         Table table = Table.deserialize(tableName);
         ArrayList<bplustree> indices = new ArrayList<>();
         for (String indexName : columnsWithIndex.get(1)) {
@@ -405,12 +399,12 @@ public class DBApp {
                 List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
                 Tuple tuple = targetPage.getRecordBS(table.getClusteringKey(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
                 for (String column : htblColNameValue.keySet()) {
-                        if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
-                            satisfied = false;
-                            break;
-                        }
+                    if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
+                        satisfied = false;
+                        break;
+                    }
                 }
-                if(satisfied){
+                if (satisfied) {
                     targetPage.delete(tuple);
                     deleteFromIndices(indices, columnsWithIndex.get(0), tuple, targetPageInfo.getPageAddress());
                     if (tuple.equals(temp) && !targetPage.isEmpty()) {
@@ -419,8 +413,7 @@ public class DBApp {
 
                     }
                 }
-                if (!targetPage.isEmpty())
-                        targetPage.serialize(targetPageInfo.getPageAddress());
+                if (!targetPage.isEmpty()) targetPage.serialize(targetPageInfo.getPageAddress());
                 else {
                     //To delete page from disk
                     File file = new File(targetPageInfo.getPageAddress());
@@ -431,30 +424,29 @@ public class DBApp {
 
             } else {
                 ArrayList<String> pageAddresses = table.getPagesAddresses();
-                for(String pageAddress : pageAddresses){
+                for (String pageAddress : pageAddresses) {
                     Page page = Page.deserialize(pageAddress);
                     Comparable oldMinKey = null;
-                    for(Tuple tuple : page.getRecords()){
+                    for (Tuple tuple : page.getRecords()) {
                         boolean satisfied = true;
-                        for(String column : htblColNameValue.keySet()){
-                            if(!tuple.getContent().get(column).equals(htblColNameValue.get(column))){
+                        for (String column : htblColNameValue.keySet()) {
+                            if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
                                 satisfied = false;
                                 break;
                             }
                         }
-                        if(satisfied){
+                        if (satisfied) {
                             Tuple temp = page.getRecords().firstElement();
                             page.delete(tuple);
                             oldMinKey = tuple.getClusteringKeyValue();
-                            deleteFromIndices(indices,columnsWithIndex.get(0),tuple,pageAddress);
-                            if(tuple.equals(temp) && !page.isEmpty()){
+                            deleteFromIndices(indices, columnsWithIndex.get(0), tuple, pageAddress);
+                            if (tuple.equals(temp) && !page.isEmpty()) {
                                 Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
-                                table.updatePageInfoMinKey(pageAddress,oldMinKey,newMinKey);
+                                table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
                             }
                         }
                     }
-                    if (!page.isEmpty())
-                        page.serialize(pageAddress);
+                    if (!page.isEmpty()) page.serialize(pageAddress);
                     else {
                         //To delete page from disk
                         File file = new File("serialized/pages/" + pageAddress + ".class");
@@ -464,16 +456,14 @@ public class DBApp {
                     }
                 }
             }
-            for(int i=0;i<indices.size();i++){
-                indices.get(i).serialize(columnsWithIndex.get(1).get(i),tableName);
+            for (int i = 0; i < indices.size(); i++) {
+                indices.get(i).serialize(columnsWithIndex.get(1).get(i), tableName);
             }
             table.serialize();
         }
     }
 
-    public Iterator selectFromTable(SQLTerm[] arrSQLTerms,
-                                    String[] strarrOperators) throws DBAppException, IOException, ClassNotFoundException {
-
+    public Iterator selectFromTable(SQLTerm[] arrSQLTerms, String[] strarrOperators) throws DBAppException, IOException, ClassNotFoundException {
 
 
         //TODO validate the input
@@ -484,7 +474,7 @@ public class DBApp {
         Stack<SQLOperator> operators = new Stack<>();
 
         operands.push(arrSQLTerms[0]);
-        if(strarrOperators.length!=0) {
+        if (strarrOperators.length != 0) {
             for (int i = 1; i < arrSQLTerms.length; i++) {
                 SQLOperator operator = SQLOperator.valueOf(strarrOperators[i - 1]);
                 if (!operators.isEmpty() && operators.peek().compareTo(operator) < 0) {
@@ -516,17 +506,17 @@ public class DBApp {
             }
         }
 
-        Object result=operands.pop();
-        if (result instanceof SQLTerm) result=selectionHandler.process((SQLTerm) result);
-        return ((TreeSet<Tuple>)result).iterator();
+        Object result = operands.pop();
+        if (result instanceof SQLTerm) result = selectionHandler.process((SQLTerm) result);
+        return ((TreeSet<Tuple>) result).iterator();
     }
 
 
     public static void main(String[] args) {
 //		storage.bplustree b = new storage.bplustree();
-        try{
+        try {
             String strTableName = "Student";
-            DBApp	dbApp = new DBApp( );
+            DBApp dbApp = new DBApp();
 
 //            Hashtable htblColNameType = new Hashtable( );
 //            htblColNameType.put("id", "java.lang.Integer");
@@ -535,21 +525,18 @@ public class DBApp {
 //            dbApp.createTable( strTableName, "id", htblColNameType );
 //            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //
-            Hashtable htblColNameValue = new Hashtable( );
+            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 2343432 );
 //            htblColNameValue.put("name", "Ahmed Noor" );
 //            htblColNameValue.put("gpa",  0.95 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-//            dbApp.createTable(strTableName, "id", htblColNameType);
-//            dbApp.createIndex(strTableName, "gpa", "gpaIndex");
-////
-//            Hashtable htblColNameValue = new Hashtable();
+//
 //            htblColNameValue.put("id", 1);
 //            htblColNameValue.put("name","Ahmed Noor");
 //            htblColNameValue.put("gpa", 0.95);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
-//            htblColNameValue.clear( );
+//            htblColNameValue.clear();
 //            htblColNameValue.put("id", 453455 );
 //            htblColNameValue.put("name", "Ahmed Noor");
 //            htblColNameValue.put("gpa",  0.95 );
@@ -577,40 +564,43 @@ public class DBApp {
             SQLTerm[] arrSQLTerms;
             arrSQLTerms = new SQLTerm[2];
             for (int i = 0; i < 2; i++) {
-                 arrSQLTerms[i] = new app.SQLTerm();
+                arrSQLTerms[i] = new app.SQLTerm();
             }
-            arrSQLTerms[0]._strTableName =  "Student";
-            arrSQLTerms[0]._strColumnName=  "name";
-            arrSQLTerms[0]._strOperator  =  "=";
-            arrSQLTerms[0]._objValue     =  "John Noor";
+            arrSQLTerms[0]._strTableName = "Student";
+            arrSQLTerms[0]._strColumnName = "name";
+            arrSQLTerms[0]._strOperator = "=";
+            arrSQLTerms[0]._objValue = "John Noor";
 
-            arrSQLTerms[1]._strTableName =  "Student";
-            arrSQLTerms[1]._strColumnName=  "gpa";
-            arrSQLTerms[1]._strOperator  =  "=";
-            arrSQLTerms[1]._objValue     =  1.25;
+            arrSQLTerms[1]._strTableName = "Student";
+            arrSQLTerms[1]._strColumnName = "gpa";
+            arrSQLTerms[1]._strOperator = "=";
+            arrSQLTerms[1]._objValue = 8.0;
 
-            String[]strarrOperators = new String[1];
+            String[] strarrOperators = new String[1];
             strarrOperators[0] = "OR";
             // select * from Student where name = "John Noor" or gpa = 1.5;
-            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
             while (resultSet.hasNext()) {
                 Tuple t = (Tuple) resultSet.next();
                 System.out.println(t);
             }
 
-            htblColNameValue.clear( );
-            htblColNameValue.put("name", "Dalia Noor");
-//            htblColNameValue.put("gpa",  0.88);
-            dbApp.updateTable("Student","5674567",htblColNameValue);
+            System.out.println("---------------------------------------------------");
 
-            resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+
+            htblColNameValue.clear();
+            htblColNameValue.put("name", "Ashraf Mansour");
+            htblColNameValue.put("gpa", 8.0);
+            dbApp.updateTable("Student", "5674567", htblColNameValue);
+
+
+            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
             while (resultSet.hasNext()) {
                 Tuple t = (Tuple) resultSet.next();
                 System.out.println(t);
             }
-        }
-        catch(Exception exp){
-            exp.printStackTrace( );
+        } catch (Exception exp) {
+            exp.printStackTrace();
         }
     }
 

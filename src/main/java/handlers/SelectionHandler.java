@@ -11,22 +11,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.TreeSet;
 import java.util.List;
-import java.util.TreeSet;
 
 public class SelectionHandler {
     private String tableName;
-    private List<String> indexColumns;
+    private List<String> indicesNames;
 
     public SelectionHandler(String tableName) throws IOException {
         this.tableName = tableName;
-        this.indexColumns = MetaDataManger.getInstance().
+        this.indicesNames = MetaDataManger.getInstance().
                 readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.INDEX_NAME},
                         strings -> !strings[MetaDataColumns.INDEX_NAME.ordinal()].equals("null"), false).get(0);
     }
 
     public TreeSet<Tuple> process(SQLTerm term) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
-        if (indexColumns.contains(term._strColumnName))
+
+        if (indicesNames.contains(term._strColumnName))
             result = RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName);
         else
             result = RecordsFetcher.fetchWithoutIndex(term);
@@ -50,7 +50,7 @@ public class SelectionHandler {
         if (operands.size() == 0) throw new DBAppException("AND operator should have at least one operand");
         SQLTerm termWithIndex = null;
         for (SQLTerm term : operands) {
-            if (indexColumns.contains(term._strColumnName)) {
+            if (indicesNames.contains(term._strColumnName)) {
                 termWithIndex = term;
                 break;
             }
@@ -108,7 +108,7 @@ public class SelectionHandler {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {
-                if (indexColumns.contains(term._strColumnName))
+                if (indicesNames.contains(term._strColumnName))
                     result.addAll(RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName));
                 else
                     result.addAll(RecordsFetcher.fetchWithoutIndex(term));
@@ -121,7 +121,7 @@ public class SelectionHandler {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {
-                if (indexColumns.contains(term._strColumnName)) {
+                if (indicesNames.contains(term._strColumnName)) {
                     XORHelper(result, RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName));
                 } else
                     XORHelper(result, RecordsFetcher.fetchWithoutIndex(term));
