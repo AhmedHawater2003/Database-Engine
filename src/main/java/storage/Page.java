@@ -2,6 +2,7 @@ package storage;
 
 import java.io.*;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.Vector;
 import helpers.ConfigReader;
 import exceptions.DBAppException;
@@ -9,8 +10,8 @@ import exceptions.DBAppException;
 
 public class Page implements Serializable {
 
-//    private final int maxNumberOfRecords = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
-    private final int maxNumberOfRecords = 1;
+    private final int maxNumberOfRecords = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
+//    private final int maxNumberOfRecords = 1;
     public Vector<Tuple> getRecords() {
         return records;
     }
@@ -72,6 +73,16 @@ public class Page implements Serializable {
         in.close();
         fileIn.close();
         return page;
+    }
+
+
+    public Tuple getRecordBS(String clustringKeyName,Comparable key) throws DBAppException {
+        Hashtable<String, Object> temp = new Hashtable<>();
+        temp.put(clustringKeyName, key);
+        Tuple dummy = new Tuple(temp,clustringKeyName);
+        int idx=Collections.binarySearch(records, dummy);
+        if(idx<0) throw new DBAppException("Record not found");
+        return records.get(idx);
     }
 
 }

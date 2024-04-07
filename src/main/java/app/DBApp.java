@@ -76,54 +76,47 @@ public class DBApp {
         //check that the table exists with the correct naming
 
 
-            FileReader filereader = new FileReader("resources/metadata.csv");
-            boolean tableFound = false, columnFound = false, indexValid = false;
+        FileReader filereader = new FileReader("resources/metadata.csv");
+        boolean tableFound = false, columnFound = false, indexValid = false;
 
 
-            CSVReader csvReader = new CSVReader(filereader);
-            String[] nextRecord;
+        CSVReader csvReader = new CSVReader(filereader);
+        String[] nextRecord;
 
 
-            while ((nextRecord = csvReader.readNext()) != null) {
-
-                if (nextRecord[0].equals(strTableName)) {
-                    tableFound = true;
-                    if (nextRecord[1].equals(strColName)) {
-                        columnFound = true;
-                        if (nextRecord[4].equals("null")) {
-                            indexValid = true;
-                            //edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
-                            targetline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
-                            nextRecord[4] = strIndexName;
-                            nextRecord[5] = "B+tree";
-                            editedline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
-                            // write to the actual csv file
-
-
-                            break;
-                        }
+        while ((nextRecord = csvReader.readNext()) != null) {
+            if (nextRecord[0].equals(strTableName)) {
+                tableFound = true;
+                if (nextRecord[1].equals(strColName)) {
+                    columnFound = true;
+                    if (nextRecord[4].equals("null")) {
+                        indexValid = true;
+                        //edit the csv and make nextRecord[4] = strIndexName and nextRecord[5] = "B+tree"
+                        targetline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                        nextRecord[4] = strIndexName;
+                        nextRecord[5] = "B+tree";
+                        editedline += nextRecord[0] + "," + nextRecord[1] + "," + nextRecord[2] + "," + nextRecord[3] + "," + nextRecord[4] + "," + nextRecord[5];
+                        // write to the actual csv file
+                        break;
                     }
                 }
             }
-            csvReader.close();
-            if (!tableFound) {
-                throw new DBAppException("Table Not Found!");
-            } else if (!columnFound) {
-                throw new DBAppException("Column Not Found!");
-
-            } else if (!indexValid) {
-                throw new DBAppException("There is already an Index on this column");
-            }
-
-
+        }
+        csvReader.close();
+        if (!tableFound) {
+            throw new DBAppException("Table Not Found!");
+        } else if (!columnFound) {
+            throw new DBAppException("Column Not Found!");
+        } else if (!indexValid) {
+            throw new DBAppException("There is already an Index on this column");
+        }
 
 
         Table myTable = (Table) Table.deserialize(strTableName);
 
-
         //create index
         int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
-        bplustree index = new bplustree(fanout);
+        bplustree index = new bplustree(fanout+1);
         try {
             filereader = new FileReader("resources/metadata.csv");
             csvReader = new CSVReader(filereader);
@@ -148,7 +141,6 @@ public class DBApp {
             for (String pageAddress : myTable.getPagesAddresses()) {
                 Page page = null;
                 try {
-
                     FileInputStream fileIn = new FileInputStream(pageAddress);
                     ObjectInputStream in = new ObjectInputStream(fileIn);
                     page = (Page) in.readObject();
@@ -284,10 +276,10 @@ public class DBApp {
         for(String colName : columnNames){
             if(htblColNameValue.containsKey(colName)){
                 bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)),strTableName);
-                indexNames.remove(columnNames.indexOf(colName));
+                String indexName = indexNames.remove(columnNames.indexOf(colName));
                 columnNamesClone.remove(colName);
                 deleteWithIndex(htblColNameValue,index,indexNames,colName,columnNamesClone,strTableName);
-                index.serialize(columnsWithIndex.get(1).get(columnsWithIndex.get(0).indexOf(colName)),strTableName);
+                index.serialize(indexName,strTableName);
                 return;
             }
         }
@@ -299,7 +291,8 @@ public class DBApp {
         boolean deserializeFlag = false;
         Comparable minKey = null;
         HashMap<String,Integer> map = index.search((Comparable) htblColNameValue.get(colName));
-        for(String pageAddress : map.keySet()){
+        HashMap<String,Integer> tempMap = (HashMap<String, Integer>) map.clone();
+        for(String pageAddress : tempMap.keySet()){
             Page page = Page.deserialize(pageAddress);
             Vector<Tuple> records = (Vector<Tuple>) page.getRecords().clone();
             for(Tuple tuple : records){
@@ -336,8 +329,7 @@ public class DBApp {
                 page.serialize(pageAddress);
             else{
                 //To delete page from disk
-                System.out.println(pageAddress);
-                File file = new File("serialized/pages/"+pageAddress+".class");
+                File file = new File(pageAddress);
                 file.delete();
                //Deleting page from the table object
                 Table table = Table.deserialize(tableName);
@@ -362,25 +354,25 @@ public class DBApp {
                 boolean satisfied = true;
                 Page targetPage = Page.deserialize(targetPageInfo.getPageAddress());
                 Tuple temp = targetPage.getRecords().firstElement();
-                List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
+//                List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
                 Tuple tuple = targetPage.getRecordBS(table.getClusteringKey(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
                 for (String column : htblColNameValue.keySet()) {
-                        if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
-                            satisfied = false;
-                            break;
-                        }
+                    if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
+                        satisfied = false;
+                        break;
+                    }
                 }
-                if(satisfied){
+                if (satisfied) {
                     targetPage.delete(tuple);
                     deleteFromIndices(indices, columnsWithIndex.get(0), tuple, targetPageInfo.getPageAddress());
                     if (tuple.equals(temp) && !targetPage.isEmpty()) {
                         Comparable newMinKey = targetPage.getRecords().firstElement().getClusteringKeyValue();
-                        table.updatePageInfoMinKey(targetPageInfo, newMinKey);
+                        table.updatePageInfoMinKey(targetPageInfo.getPageAddress(),targetPageInfo.getMinKey(), newMinKey);
 
                     }
                 }
                 if (!targetPage.isEmpty())
-                        targetPage.serialize(targetPageInfo.getPageAddress());
+                    targetPage.serialize(targetPageInfo.getPageAddress());
                 else {
                     //To delete page from disk
                     File file = new File(targetPageInfo.getPageAddress());
@@ -389,46 +381,48 @@ public class DBApp {
                     table.deletePage(targetPageInfo.getPageAddress(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
                 }
 
-            } else {
-                ArrayList<String> pageAddresses = table.getPagesAddresses();
-                for(String pageAddress : pageAddresses){
-                    Page page = Page.deserialize(pageAddress);
-                    Comparable oldMinKey = null;
-                    for(Tuple tuple : page.getRecords()){
-                        boolean satisfied = true;
-                        for(String column : htblColNameValue.keySet()){
-                            if(!tuple.getContent().get(column).equals(htblColNameValue.get(column))){
-                                satisfied = false;
-                                break;
-                            }
-                        }
-                        if(satisfied){
-                            Tuple temp = page.getRecords().firstElement();
-                            page.delete(tuple);
-                            oldMinKey = tuple.getClusteringKeyValue();
-                            deleteFromIndices(indices,columnsWithIndex.get(0),tuple,pageAddress);
-                            if(tuple.equals(temp) && !page.isEmpty()){
-                                Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
-                                table.updatePageInfoMinKey(pageAddress,oldMinKey,newMinKey);
-                            }
+            }
+        }
+        else {
+            ArrayList<String> pageAddresses = table.getPagesAddresses();
+            for (String pageAddress : pageAddresses) {
+                Page page = Page.deserialize(pageAddress);
+                Vector<Tuple> records = (Vector<Tuple>) page.getRecords().clone();
+                Comparable oldMinKey = null;
+                for (Tuple tuple : records) {
+                    boolean satisfied = true;
+                    for (String column : htblColNameValue.keySet()) {
+                        if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
+                            satisfied = false;
+                            break;
                         }
                     }
-                    if (!page.isEmpty())
-                        page.serialize(pageAddress);
-                    else {
-                        //To delete page from disk
-                        File file = new File("serialized/pages/" + pageAddress + ".class");
-                        file.delete();
-                        //Deleting page from the table object
-                        table.deletePage(pageAddress, oldMinKey);
+                    if (satisfied) {
+                        Tuple temp = page.getRecords().firstElement();
+                        page.delete(tuple);
+                        oldMinKey = tuple.getClusteringKeyValue();
+                        deleteFromIndices(indices, columnsWithIndex.get(0), tuple, pageAddress);
+                        if (tuple.equals(temp) && !page.isEmpty()) {
+                            Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
+                            table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
+                        }
                     }
                 }
+                if (!page.isEmpty())
+                    page.serialize(pageAddress);
+                else {
+                    //To delete page from disk
+                    File file = new File(pageAddress);
+                    file.delete();
+                    //Deleting page from the table object
+                    table.deletePage(pageAddress, oldMinKey);
+                }
             }
-            for(int i=0;i<indices.size();i++){
-                indices.get(i).serialize(columnsWithIndex.get(1).get(i),tableName);
-            }
-            table.serialize();
         }
+        for (int i = 0; i < indices.size(); i++) {
+            indices.get(i).serialize(columnsWithIndex.get(1).get(i), tableName);
+        }
+        table.serialize();
     }
 
     public Iterator selectFromTable(SQLTerm[] arrSQLTerms,
@@ -489,67 +483,99 @@ public class DBApp {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 
-//            Hashtable htblColNameType = new Hashtable();
-//            htblColNameType.put("id", "java.lang.Integer");
-//            htblColNameType.put("name", "java.lang.String");
-//            htblColNameType.put("gpa", "java.lang.double");
+            Hashtable htblColNameType = new Hashtable();
+            htblColNameType.put("id", "java.lang.Integer");
+            htblColNameType.put("name", "java.lang.String");
+            htblColNameType.put("gpa", "java.lang.double");
 //            dbApp.createTable(strTableName, "id", htblColNameType);
 //            dbApp.createIndex(strTableName, "gpa", "gpaIndex");
-////
-//            Hashtable htblColNameValue = new Hashtable();
+
+            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 1);
-//            htblColNameValue.put("name","Ahmed Noor");
-//            htblColNameValue.put("gpa", 0.95);
+//            htblColNameValue.put("name","Ahmed Noor0.85");
+//            htblColNameValue.put("gpa", 0.85);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 2);
-//            htblColNameValue.put("name", "Ahmed Noor");
+//            htblColNameValue.put("name", "Ahmed Noor0.95");
 //            htblColNameValue.put("gpa",0.95);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 3);
-//            htblColNameValue.put("name","Dalia Noor");
-//            htblColNameValue.put("gpa", 1.25);
+//            htblColNameValue.put("name","Dalia Noor1.0");
+//            htblColNameValue.put("gpa", 1.0);
+//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 4);
+//            htblColNameValue.put("name","Zaky Noor1.05");
+//            htblColNameValue.put("gpa", 1.05);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
 //
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 5);
-//            htblColNameValue.put("name","Zaky Noor");
-//            htblColNameValue.put("gpa", 0.88);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
-//
-//
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 4);
-//            htblColNameValue.put("name", "John Noor");
+//            htblColNameValue.put("name", "John Noor1.5");
 //            htblColNameValue.put("gpa", 1.5);
 //            dbApp.insertIntoTable(strTableName, htblColNameValue);
-//
+////
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 3);
+//            htblColNameValue.put("id", 6);
+//            htblColNameValue.put("name", "John Noor1.6");
+//            htblColNameValue.put("gpa", 1.6);
+//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//            Table table = Table.deserialize(strTableName);
+//            System.out.println(table.isEmpty());
+//            ArrayList<Page> pages = new ArrayList<>();
+//            for(String pageAddress : table.getPagesAddresses()){
+//                System.out.print(Page.deserialize(pageAddress));
+//                System.out.println("pageAddress: "+pageAddress);
+//            }
+//
+
+//            System.out.println(table);
 //
 //
+//            delete without index clustering
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 5);
 //            dbApp.deleteFromTable(strTableName, htblColNameValue);
 //
+////            delete without index does nothing
+//            htblColNameValue.clear();
+//            htblColNameValue.put("name", "Dalia Noor");
+//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//
+//            //delete without index
+//            htblColNameValue.clear();
+//            htblColNameValue.put("name", "John Noor");
+//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//            //delete with index
+//            htblColNameValue.clear();
+//            htblColNameValue.put("gpa", 0.95);
+//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+////
 //            var dalia = bplustree.deserialize("gpaIndex");
 //
-//            System.out.println(Page.deserialize("serialized/pages/Student3.class"));
+//            System.out.println(Page.deserialize("serialized/pages/Student2.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student4.class"));
+            bplustree b = bplustree.deserialize("gpaIndex", "Student");
+//            System.out.println(b.search(1.5));
+            System.out.println(b);
 
 
-
-            app.SQLTerm[] arrSQLTerms;
-            arrSQLTerms = new app.SQLTerm[3];
-            for (int i = 0; i < 3; i++) {
-                arrSQLTerms[i] = new app.SQLTerm();
-            }
-            arrSQLTerms[0]._strTableName = "Student";
-            arrSQLTerms[0]._strColumnName = "gpa";
-            arrSQLTerms[0]._strOperator = "=";
-            arrSQLTerms[0]._objValue = 0.95;
-
+//
+//            app.SQLTerm[] arrSQLTerms;
+//            arrSQLTerms = new app.SQLTerm[3];
+//            for (int i = 0; i < 3; i++) {
+//                arrSQLTerms[i] = new app.SQLTerm();
+//            }
+//            arrSQLTerms[0]._strTableName = "Student";
+//            arrSQLTerms[0]._strColumnName = "gpa";
+//            arrSQLTerms[0]._strOperator = "=";
+//            arrSQLTerms[0]._objValue = 0.95;
+//
 //            arrSQLTerms[1]._strTableName = "Student";
 //            arrSQLTerms[1]._strColumnName = "name";
 //            arrSQLTerms[1]._strOperator = "=";
@@ -559,18 +585,18 @@ public class DBApp {
 //            arrSQLTerms[2]._strColumnName = "id";
 //            arrSQLTerms[2]._strOperator = "=";
 //            arrSQLTerms[2]._objValue = 3;
-
-
-
-            String[] strarrOperators = new String[0];
+//
+//
+//
+//            String[] strarrOperators = new String[2];
 //            strarrOperators[0] = "AND";
 //            strarrOperators[1] = "OR";
-            // select * from Student where name = "John Noor" or gpa = 1.5;
-            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-            while (resultSet.hasNext()) {
-                Tuple t = (Tuple) resultSet.next();
-                System.out.println(t);
-            }
+//            // select * from Student where name = "John Noor" or gpa = 1.5;
+//            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+//            while (resultSet.hasNext()) {
+//                Tuple t = (Tuple) resultSet.next();
+//                System.out.println(t);
+//            }
         } catch (Exception exp) {
             exp.printStackTrace();
         }

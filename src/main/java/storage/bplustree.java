@@ -15,6 +15,20 @@ public class bplustree implements Serializable {
 
 	/*~~~~~~~~~~~~~~~~ HELPER FUNCTIONS ~~~~~~~~~~~~~~~~*/
 
+
+	public String toString(){
+		String result = "";
+		LeafNode currNode = this.firstLeaf;
+		while (currNode != null) {
+			DictionaryPair dps[] = currNode.dictionary;
+			for (DictionaryPair dp : dps) {
+				if (dp == null) { break; }
+				result+=dp.key+" : "+dp.value+"\n";
+			}
+			currNode = currNode.rightSibling;
+		}
+		return result;
+	}
 	/**
 	 * This method performs a standard binary search on a sorted
 	 * DictionaryPair[] and returns the index of the dictionary pair
@@ -300,7 +314,7 @@ public class bplustree implements Serializable {
 	 */
 	private DictionaryPair[] splitDictionary(LeafNode ln, int split) {
 
-		DictionaryPair[] dictionary = ln.dictionary;
+		DictionaryPair[] dictionary = ln.dictionary.clone();
 
 		/* Initialize two dictionaries that each hold half of the original
 		   dictionary values */
@@ -757,7 +771,7 @@ public class bplustree implements Serializable {
 
 		try {
 			// Create an output stream for the file where the object will be stored
-			FileOutputStream fileOut = new FileOutputStream("serialized/indices/"+tableName+"_"+indexName+".class");
+			FileOutputStream fileOut = new FileOutputStream("serialized/Indices/"+tableName+"_"+indexName+".class");
 			ObjectOutputStream out = new ObjectOutputStream(fileOut);
 
 			// Write the mySambosa object to the output stream
@@ -979,6 +993,14 @@ public class bplustree implements Serializable {
 			this.keys = keys;
 			this.childPointers = pointers;
 		}
+
+		public String toString(){
+			String s = "";
+			for(int i = 0; i<degree;i++){
+				s+=keys[i]+" ";
+			}
+			return s;
+		}
 	}
 
 	/**
@@ -1103,6 +1125,14 @@ public class bplustree implements Serializable {
 			this.numPairs = linearNullSearch(dps);
 			this.parent = parent;
 		}
+
+		public String toString(){
+			String s = "";
+			for(int i = 0; i<numPairs;i++){
+				s+=dictionary[i].key+" ";
+			}
+			return s;
+		}
 	}
 
 	/**
@@ -1141,6 +1171,8 @@ public class bplustree implements Serializable {
 			else if (i>0) { return 1; }
 			else { return -1; }
 		}
+
+
 	}
 
 	public static void main(String[] args) {

@@ -73,7 +73,8 @@ public class Table implements Serializable {
         pagesInfo.add(new PageInfo(oldPageInfo.getPageAddress(), newMinKey));
     }
     public void updatePageInfoMinKey(String pageAddress , Comparable oldMinKey, Comparable newMinKey) {
-        updatePageInfoMinKey(new PageInfo(pageAddress, oldMinKey), newMinKey);
+        pagesInfo.remove(new PageInfo(pageAddress, oldMinKey));
+        pagesInfo.add(new PageInfo(pageAddress, newMinKey));
     }
 
     public boolean isEmpty() {
