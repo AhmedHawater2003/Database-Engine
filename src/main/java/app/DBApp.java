@@ -276,10 +276,10 @@ public class DBApp {
             content.put(key, htblColNameValue.get(key));
 
             if(indexedColumns.contains(key)){
-                bplustree index = bplustree.deserialize(strTableName + "_" + key+"Index");
+                bplustree index = bplustree.deserialize(indexedColumnsName,strTableName);
                 index.deleteFromPage(oldValue,pageInfo.getPageAddress());
                 index.insert((Comparable) content.get(key), pageInfo.getPageAddress());
-                index.serialize(strTableName + "_" + key+"Index");
+                index.serialize(indexedColumnsName,strTableName);
             }
         }
         targetPage.serialize(pageInfo.getPageAddress());
