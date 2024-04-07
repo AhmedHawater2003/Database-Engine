@@ -249,10 +249,10 @@ public class DBApp {
 
         Table table = Table.deserialize(strTableName);
 
-        HashMap<String, String> columnNames = new HashMap<>();
-        List<List<String>> columnsWithIndiciesL = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
-        for (int i = 0; i < columnsWithIndicies.get(0).size(); i++) {
-            columnNames.put(columnsWithIndicies.get(0).get(i), columnsWithIndicies.get(1).get(i));
+        HashMap<String, String> columnWithIndex = new HashMap<>();
+        List<List<String>> indexList = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
+        for (int i = 0; i < indexList.get(0).size(); i++) {
+            columnWithIndex.put(indexList.get(0).get(i), indexList.get(1).get(i));
         }
 
         Comparable castedValue = getCastedClustreringKeyValue(strTableName, strClusteringKeyValue);
@@ -263,19 +263,17 @@ public class DBApp {
         Tuple targetTuple = targetPage.getRecordBS(table.getClusteringKey(), castedValue);
         Hashtable<String, Object> content = targetTuple.getContent();
 
-        for (String key : columnNames.keySet()) {
-
-            String indexedColumnName = indexedColumns.get(key);
+        for (String key : htblColNameValue.keySet()) {
 
             Comparable oldValue = (Comparable) content.get(key);
             content.put(key, htblColNameValue.get(key));
 
-            if (!indexedColumnName.equals("null")) {
-                bplustree index = bplustree.deserialize(indexedColumnName, strTableName);
+            if (columnWithIndex.containsKey(key)) {
+                bplustree index = bplustree.deserialize(columnWithIndex.get(key), strTableName);
                 index.deleteFromPage(oldValue, pageInfo.getPageAddress());
                 index.insert((Comparable) content.get(key), pageInfo.getPageAddress());
 
-                index.serialize(indexedColumnName, strTableName);
+                index.serialize(columnWithIndex.get(key), strTableName);
             }
         }
 
@@ -589,8 +587,8 @@ public class DBApp {
 
 
             htblColNameValue.clear();
-            htblColNameValue.put("name", "Ashraf Mansour");
-            htblColNameValue.put("gpa", 8.0);
+            htblColNameValue.put("name", "Ashraf Mansour11");
+//            htblColNameValue.put("gpa", 8.0);
             dbApp.updateTable("Student", "5674567", htblColNameValue);
 
 
