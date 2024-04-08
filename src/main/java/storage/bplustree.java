@@ -563,7 +563,7 @@ public class bplustree implements Serializable {
 	}
 
 	public void deleteFromPage(Comparable key ,String pageName){
-		HashMap<String,Integer> map = this.search(key);
+		HashMap<String,Integer> map = this.search(key); // TODO handle if map is null ( key does not exists )
 		if(map.get(pageName)==1){
 			map.remove(pageName);
 			if(map.isEmpty()){

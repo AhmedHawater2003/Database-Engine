@@ -11,7 +11,6 @@ import handlers.SelectionHandler;
 import helpers.ConfigReader;
 import helpers.MetaDataColumns;
 import helpers.MetaDataManger;
-import helpers.RecordsFetcher;
 import storage.Page;
 import storage.PageInfo;
 import storage.Table;
@@ -246,13 +245,57 @@ public class DBApp {
     // htblColNameValue holds the key and new value
     // htblColNameValue will not include clustering key as column name
     // strClusteringKeyValue is the value to look for to find the row to update.
-    public void updateTable(String strTableName,
-                            String strClusteringKeyValue,
-                            Hashtable<String, Object> htblColNameValue) throws DBAppException {
+    public void updateTable(String strTableName, String strClusteringKeyValue, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
-        throw new DBAppException("not implemented yet");
+
+        Table table = Table.deserialize(strTableName);
+
+        HashMap<String, String> columnWithIndex = new HashMap<>();
+        List<List<String>> indexList = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
+        for (int i = 0; i < indexList.get(0).size(); i++) {
+            columnWithIndex.put(indexList.get(0).get(i), indexList.get(1).get(i));
+        }
+
+        Comparable castedValue = getCastedClusteringKeyValue(strTableName, strClusteringKeyValue);
+
+        PageInfo pageInfo = table.getTargetPageInfo(castedValue);
+        Page targetPage = Page.deserialize(pageInfo.getPageAddress());
+
+        Tuple targetTuple = targetPage.getRecordBS(table.getClusteringKey(), castedValue);
+        Hashtable<String, Object> content = targetTuple.getContent();
+
+        for (String key : htblColNameValue.keySet()) {
+
+            Comparable oldValue = (Comparable) content.get(key);
+            content.put(key, htblColNameValue.get(key));
+
+            if (columnWithIndex.containsKey(key)) {
+                bplustree index = bplustree.deserialize(columnWithIndex.get(key), strTableName);
+                index.deleteFromPage(oldValue, pageInfo.getPageAddress());
+                index.insert((Comparable) content.get(key), pageInfo.getPageAddress());
+
+                index.serialize(columnWithIndex.get(key), strTableName);
+            }
+        }
+
+        targetPage.serialize(pageInfo.getPageAddress());
+
     }
 
+    public Comparable getCastedClusteringKeyValue(String tableName, String clusteringKeyValue) throws IOException {
+        String clusteringKeyType = MetaDataManger.getInstance().readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_TYPE}, strings -> strings[MetaDataColumns.IS_CLUSTERING_KEY.ordinal()].equals("True"), false).get(0).get(0);
+
+        switch (clusteringKeyType) {
+            case "java.lang.Integer":
+                return Integer.parseInt(clusteringKeyValue);
+            case "java.lang.Double":
+                return Double.parseDouble(clusteringKeyValue);
+            case "java.lang.String":
+                return clusteringKeyValue;
+            default:
+                return null;
+        }
+    }
 
     // following method could be used to delete one or more rows.
     // htblColNameValue holds the key and value. This will be used in search
@@ -478,125 +521,86 @@ public class DBApp {
 
     public static void main(String[] args) {
 //		storage.bplustree b = new storage.bplustree();
-
         try {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 
-            Hashtable htblColNameType = new Hashtable();
-            htblColNameType.put("id", "java.lang.Integer");
-            htblColNameType.put("name", "java.lang.String");
-            htblColNameType.put("gpa", "java.lang.double");
-//            dbApp.createTable(strTableName, "id", htblColNameType);
-//            dbApp.createIndex(strTableName, "gpa", "gpaIndex");
+//            Hashtable htblColNameType = new Hashtable( );
+//            htblColNameType.put("id", "java.lang.Integer");
+//            htblColNameType.put("name", "java.lang.String");
+//            htblColNameType.put("gpa", "java.lang.double");
+//            dbApp.createTable( strTableName, "id", htblColNameType );
+//            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 
             Hashtable htblColNameValue = new Hashtable();
-//            htblColNameValue.put("id", 1);
-//            htblColNameValue.put("name","Ahmed Noor0.85");
-//            htblColNameValue.put("gpa", 0.85);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//            htblColNameValue.put("id", 2343432 );
+//            htblColNameValue.put("name", "Ahmed Noor" );
+//            htblColNameValue.put("gpa",  0.95 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 2);
-//            htblColNameValue.put("name", "Ahmed Noor0.95");
-//            htblColNameValue.put("gpa",0.95);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
+//            htblColNameValue.put("id", 453455 );
+//            htblColNameValue.put("name", "Ahmed Noor");
+//            htblColNameValue.put("gpa",  0.95 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 3);
-//            htblColNameValue.put("name","Dalia Noor1.0");
-//            htblColNameValue.put("gpa", 1.0);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
-//
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 4);
-//            htblColNameValue.put("name","Zaky Noor1.05");
-//            htblColNameValue.put("gpa", 1.05);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
-//
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 5);
-//            htblColNameValue.put("name", "John Noor1.5");
-//            htblColNameValue.put("gpa", 1.5);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
-////
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 6);
-//            htblColNameValue.put("name", "John Noor1.6");
-//            htblColNameValue.put("gpa", 1.6);
-//            dbApp.insertIntoTable(strTableName, htblColNameValue);
-//            Table table = Table.deserialize(strTableName);
-//            System.out.println(table.isEmpty());
-//            ArrayList<Page> pages = new ArrayList<>();
-//            for(String pageAddress : table.getPagesAddresses()){
-//                System.out.print(Page.deserialize(pageAddress));
-//                System.out.println("pageAddress: "+pageAddress);
-//            }
-//
-
-//            System.out.println(table);
-//
-//
-//            delete without index clustering
-//            htblColNameValue.clear();
-//            htblColNameValue.put("id", 5);
-//            dbApp.deleteFromTable(strTableName, htblColNameValue);
-//
-////            delete without index does nothing
-//            htblColNameValue.clear();
+//            htblColNameValue.clear( );
+//            htblColNameValue.put("id", 5674567);
 //            htblColNameValue.put("name", "Dalia Noor");
-//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//            htblColNameValue.put("gpa",  1.25);
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
-//            //delete without index
-//            htblColNameValue.clear();
+//            htblColNameValue.clear( );
+//            htblColNameValue.put("id", 23498);
 //            htblColNameValue.put("name", "John Noor");
-//            dbApp.deleteFromTable(strTableName, htblColNameValue);
-//            //delete with index
-//            htblColNameValue.clear();
-//            htblColNameValue.put("gpa", 0.95);
-//            dbApp.deleteFromTable(strTableName, htblColNameValue);
-////
-//            var dalia = bplustree.deserialize("gpaIndex");
+//            htblColNameValue.put("gpa",  1.5);
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
-//            System.out.println(Page.deserialize("serialized/pages/Student2.class"));
-//            System.out.println(Page.deserialize("serialized/pages/Student4.class"));
-            bplustree b = bplustree.deserialize("gpaIndex", "Student");
-//            System.out.println(b.search(1.5));
-            System.out.println(b);
+//            htblColNameValue.clear( );
+//            htblColNameValue.put("id", 78452 );
+//            htblColNameValue.put("name", "Zaky Noor");
+//            htblColNameValue.put("gpa",  0.88);
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 
-//
-//            app.SQLTerm[] arrSQLTerms;
-//            arrSQLTerms = new app.SQLTerm[3];
-//            for (int i = 0; i < 3; i++) {
-//                arrSQLTerms[i] = new app.SQLTerm();
-//            }
-//            arrSQLTerms[0]._strTableName = "Student";
-//            arrSQLTerms[0]._strColumnName = "gpa";
-//            arrSQLTerms[0]._strOperator = "=";
-//            arrSQLTerms[0]._objValue = 0.95;
-//
-//            arrSQLTerms[1]._strTableName = "Student";
-//            arrSQLTerms[1]._strColumnName = "name";
-//            arrSQLTerms[1]._strOperator = "=";
-//            arrSQLTerms[1]._objValue = "Ahmed Noor";
-//
-//            arrSQLTerms[2]._strTableName = "Student";
-//            arrSQLTerms[2]._strColumnName = "id";
-//            arrSQLTerms[2]._strOperator = "=";
-//            arrSQLTerms[2]._objValue = 3;
-//
-//
-//
-//            String[] strarrOperators = new String[2];
-//            strarrOperators[0] = "AND";
-//            strarrOperators[1] = "OR";
-//            // select * from Student where name = "John Noor" or gpa = 1.5;
-//            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-//            while (resultSet.hasNext()) {
-//                Tuple t = (Tuple) resultSet.next();
-//                System.out.println(t);
-//            }
+            SQLTerm[] arrSQLTerms;
+            arrSQLTerms = new SQLTerm[2];
+            for (int i = 0; i < 2; i++) {
+                arrSQLTerms[i] = new app.SQLTerm();
+            }
+            arrSQLTerms[0]._strTableName = "Student";
+            arrSQLTerms[0]._strColumnName = "name";
+            arrSQLTerms[0]._strOperator = "=";
+            arrSQLTerms[0]._objValue = "John Noor";
+
+            arrSQLTerms[1]._strTableName = "Student";
+            arrSQLTerms[1]._strColumnName = "gpa";
+            arrSQLTerms[1]._strOperator = "=";
+            arrSQLTerms[1]._objValue = 8.0;
+
+            String[] strarrOperators = new String[0];
+//            strarrOperators[0] = "OR";
+            // select * from Student where name = "John Noor" or gpa = 1.5;
+            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+            while (resultSet.hasNext()) {
+                Tuple t = (Tuple) resultSet.next();
+                System.out.println(t);
+            }
+
+            System.out.println("---------------------------------------------------");
+
+
+            htblColNameValue.clear();
+            htblColNameValue.put("name", "Ashraf Mansour11");
+//            htblColNameValue.put("gpa", 8.0);
+            dbApp.updateTable("Student", "5674567", htblColNameValue);
+
+
+            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+            while (resultSet.hasNext()) {
+                Tuple t = (Tuple) resultSet.next();
+                System.out.println(t);
+            }
         } catch (Exception exp) {
             exp.printStackTrace();
         }
