@@ -21,7 +21,7 @@ public class Table implements Serializable {
 
     private void initTableMetaData(Hashtable<String, String> colNameType) throws IOException {
 
-        var rows = new ArrayList<String[]>();
+        var rows = MetaDataManger.getInstance().readAll();
         rows.add(new String[]{getTableName(), getClusteringKey(), colNameType.get(getClusteringKey()), "True", "null", "null"});
         for (String colName : colNameType.keySet()) {
             if (colName.equals(getClusteringKey())) continue;

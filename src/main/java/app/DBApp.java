@@ -163,7 +163,6 @@ public class DBApp {
                                 Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
         // !TODO validate inserted table content is compatible with the desired table
-        // !TODO update the coresponding indicies
 
         List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
         ArrayList<bplustree> indices = new ArrayList<>();
@@ -485,8 +484,8 @@ public class DBApp {
             for (int i = 1; i < arrSQLTerms.length; i++) {
                 SQLOperator operator = SQLOperator.valueOf(strarrOperators[i - 1]);
                 if (!operators.isEmpty() && operators.peek().compareTo(operator) < 0) {
-                    SQLOperator topOperator = operators.peek();
-                    while (!operators.isEmpty() && topOperator.compareTo(operator) < 0) {
+                    while (!operators.isEmpty() && operators.peek().compareTo(operator) < 0) {
+                        SQLOperator topOperator = operators.peek();
                         ArrayList<Object> tempOperands = new ArrayList<>();
                         tempOperands.add(operands.pop());
                         while (!operators.isEmpty() && operators.peek().compareTo(topOperator) == 0) {
@@ -525,30 +524,42 @@ public class DBApp {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 
-//            Hashtable htblColNameType = new Hashtable( );
-//            htblColNameType.put("id", "java.lang.Integer");
-//            htblColNameType.put("name", "java.lang.String");
-//            htblColNameType.put("gpa", "java.lang.double");
-//            dbApp.createTable( strTableName, "id", htblColNameType );
+            Hashtable htblColNameType = new Hashtable( );
+            htblColNameType.put("id", "java.lang.Integer");
+            htblColNameType.put("name", "java.lang.String");
+            htblColNameType.put("gpa", "java.lang.double");
+            dbApp.createTable( strTableName, "id", htblColNameType );
 //            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
-
+//
             Hashtable htblColNameValue = new Hashtable();
-//            htblColNameValue.put("id", 2343432 );
+//            htblColNameValue.put("id", 5 );
 //            htblColNameValue.put("name", "Ahmed Noor" );
 //            htblColNameValue.put("gpa",  0.95 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-//
+
+
+
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 453455 );
+//            htblColNameValue.put("id", 4 );
 //            htblColNameValue.put("name", "Ahmed Noor");
 //            htblColNameValue.put("gpa",  0.95 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-//
+
+
+
 //            htblColNameValue.clear( );
 //            htblColNameValue.put("id", 5674567);
 //            htblColNameValue.put("name", "Dalia Noor");
 //            htblColNameValue.put("gpa",  1.25);
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
+
+//            var page = Page.deserialize("serialized/pages/Student0.class");
+//            var index = bplustree.deserialize("nameIndex", "Student");
+//            System.out.println(page);
+//            System.out.println("---------------------------------------------------");
+//            System.out.println(index);
+
+//            dbApp.createIndex("Student", "name", "nameIndex");
 //
 //            htblColNameValue.clear( );
 //            htblColNameValue.put("id", 23498);
@@ -563,44 +574,69 @@ public class DBApp {
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 
-            SQLTerm[] arrSQLTerms;
-            arrSQLTerms = new SQLTerm[2];
-            for (int i = 0; i < 2; i++) {
-                arrSQLTerms[i] = new app.SQLTerm();
-            }
-            arrSQLTerms[0]._strTableName = "Student";
-            arrSQLTerms[0]._strColumnName = "name";
-            arrSQLTerms[0]._strOperator = "=";
-            arrSQLTerms[0]._objValue = "John Noor";
-
-            arrSQLTerms[1]._strTableName = "Student";
-            arrSQLTerms[1]._strColumnName = "gpa";
-            arrSQLTerms[1]._strOperator = "=";
-            arrSQLTerms[1]._objValue = 8.0;
-
-            String[] strarrOperators = new String[0];
-//            strarrOperators[0] = "OR";
-            // select * from Student where name = "John Noor" or gpa = 1.5;
-            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-            while (resultSet.hasNext()) {
-                Tuple t = (Tuple) resultSet.next();
-                System.out.println(t);
-            }
-
-            System.out.println("---------------------------------------------------");
-
-
-            htblColNameValue.clear();
-            htblColNameValue.put("name", "Ashraf Mansour11");
-//            htblColNameValue.put("gpa", 8.0);
-            dbApp.updateTable("Student", "5674567", htblColNameValue);
-
-
-            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-            while (resultSet.hasNext()) {
-                Tuple t = (Tuple) resultSet.next();
-                System.out.println(t);
-            }
+//            SQLTerm[] arrSQLTerms;
+//            arrSQLTerms = new SQLTerm[6];
+//            for (int i = 0; i < 6; i++) {
+//                arrSQLTerms[i] = new app.SQLTerm();
+//            }
+//            arrSQLTerms[0]._strTableName = "Student";
+//            arrSQLTerms[0]._strColumnName = "name";
+//            arrSQLTerms[0]._strOperator = "<=";
+//            arrSQLTerms[0]._objValue = "John Noor";
+//
+////            arrSQLTerms[1]._strTableName = "Student";
+////            arrSQLTerms[1]._strColumnName = "gpa";
+////            arrSQLTerms[1]._strOperator = "=";
+////            arrSQLTerms[1]._objValue = 1.5;
+////
+////            arrSQLTerms[2]._strTableName = "Student";
+////            arrSQLTerms[2]._strColumnName = "gpa";
+////            arrSQLTerms[2]._strOperator = ">";
+////            arrSQLTerms[2]._objValue = 4.0;
+////
+////            arrSQLTerms[3]._strTableName = "Student";
+////            arrSQLTerms[3]._strColumnName = "gpa";
+////            arrSQLTerms[3]._strOperator = "!=";
+////            arrSQLTerms[3]._objValue = 3.0;
+////
+////            arrSQLTerms[4]._strTableName = "Student";
+////            arrSQLTerms[4]._strColumnName = "gpa";
+////            arrSQLTerms[4]._strOperator = "<";
+////            arrSQLTerms[4]._objValue = 4.0;
+////
+////            arrSQLTerms[5]._strTableName = "Student";
+////            arrSQLTerms[5]._strColumnName = "id";
+////            arrSQLTerms[5]._strOperator = ">";
+////            arrSQLTerms[5]._objValue = 3;
+//
+//            String[] strarrOperators = new String[0];
+////            strarrOperators[0] = "OR";
+////            strarrOperators[1] = "AND";
+////            strarrOperators[2] = "AND";
+////            strarrOperators[3] = "AND";
+////            strarrOperators[4] = "XOR";
+//
+//            // select * from Student where name = "John Noor" or gpa = 1.5;
+//            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+//            while (resultSet.hasNext()) {
+//                Tuple t = (Tuple) resultSet.next();
+//                System.out.println(t);
+//            }
+//
+//            System.out.println("---------------------------------------------------");
+//
+//
+//            htblColNameValue.clear();
+//            htblColNameValue.put("name", "Ashraf Mansour11");
+////            htblColNameValue.put("gpa", 8.0);
+//            dbApp.updateTable("Student", "5674567", htblColNameValue);
+//
+//
+//            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+//            while (resultSet.hasNext()) {
+//                Tuple t = (Tuple) resultSet.next();
+//                System.out.println(t);
+//            }
         } catch (Exception exp) {
             exp.printStackTrace();
         }

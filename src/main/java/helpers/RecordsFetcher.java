@@ -36,6 +36,9 @@ public class RecordsFetcher {
     private static TreeSet<Tuple> fetchEqual(SQLTerm sqlTerm,bplustree index) throws IOException, ClassNotFoundException {
         HashMap<String,Integer> map = index.search((Comparable) sqlTerm._objValue);
         TreeSet<Tuple> result = new TreeSet<>();
+
+        if(map == null) return result; // handle if key is not found in the index
+
         for(String pageAddress : map.keySet()){
             Page page = Page.deserialize(pageAddress);
             Vector <Tuple> records = page.getRecords();

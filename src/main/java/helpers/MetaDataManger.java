@@ -41,6 +41,18 @@ public class MetaDataManger {
         return readTableInfo(tableName, targetColumns, strings -> true, false);
     }
 
+    public List<String[]> readAll() {
+        List<String[]> result = new ArrayList<>();
+        try {
+            CSVReader csvReader = getCSVReader();
+            result = csvReader.readAll();
+            csvReader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
     public List<List<String>> readTableInfo(String tableName, MetaDataColumns[] targetColumns,
                                             MetaDataFilterFunction function, boolean distinct) throws IOException {
         List<List<String>> result = new ArrayList<>();
