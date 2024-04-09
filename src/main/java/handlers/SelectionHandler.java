@@ -45,6 +45,7 @@ public class SelectionHandler {
         } else if (operator == SQLOperator.XOR) {
             result = processXOR(operands);
         }
+        //TODO: else throw exception
         return result;
     }
 

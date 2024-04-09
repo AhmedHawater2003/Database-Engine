@@ -19,6 +19,7 @@ import storage.Tuple;
 import java.io.*;
 
 import storage.bplustree;
+import validators.Validator;
 
 import java.util.*;
 //import java.lang.*;
@@ -57,9 +58,8 @@ public class DBApp {
                             String strClusteringKeyColumn,
                             Hashtable<String, String> htblColNameType) throws DBAppException, IOException {
 
-        if (MetaDataManger.getInstance().exists(MetaDataColumns.TABLE_NAME, strTableName)) {
-            throw new DBAppException("Table already exists");
-        }
+
+        Validator.validateTableCreation(strTableName, strClusteringKeyColumn, htblColNameType);
 
         Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
         table.serialize();
@@ -70,6 +70,9 @@ public class DBApp {
     public void createIndex(String strTableName,
                             String strColName,
                             String strIndexName) throws DBAppException, IOException, ClassNotFoundException {
+
+
+        Validator.validateIndexCreation(strTableName, strColName, strIndexName);
         String targetline = "";
         String editedline = "";
         //check that the table exists with the correct naming
@@ -163,6 +166,7 @@ public class DBApp {
                                 Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
         // !TODO validate inserted table content is compatible with the desired table
+        Validator.validateInsertion(strTableName, htblColNameValue);
 
         List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
         ArrayList<bplustree> indices = new ArrayList<>();
@@ -247,6 +251,7 @@ public class DBApp {
     public void updateTable(String strTableName, String strClusteringKeyValue, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
 
+        Validator.validateUpdate(strTableName, strClusteringKeyValue, htblColNameValue);
         Table table = Table.deserialize(strTableName);
 
         HashMap<String, String> columnWithIndex = new HashMap<>();
@@ -281,7 +286,7 @@ public class DBApp {
 
     }
 
-    public Comparable getCastedClusteringKeyValue(String tableName, String clusteringKeyValue) throws IOException {
+    public Comparable getCastedClusteringKeyValue(String tableName, String clusteringKeyValue) throws IOException, DBAppException {
         String clusteringKeyType = MetaDataManger.getInstance().readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_TYPE}, strings -> strings[MetaDataColumns.IS_CLUSTERING_KEY.ordinal()].equals("True"), false).get(0).get(0);
 
         switch (clusteringKeyType) {
@@ -292,7 +297,7 @@ public class DBApp {
             case "java.lang.String":
                 return clusteringKeyValue;
             default:
-                return null;
+                throw new DBAppException("Invalid data type");
         }
     }
 
@@ -307,6 +312,7 @@ public class DBApp {
 
         //Whenever delete is called and there is an index on a column call it with the page the tuple is in
 
+        Validator.validateDelete();
         //!TODO validate inserted table content is compatible with the desired table
         List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
         List<String> columnNamesClone = new ArrayList<>();
@@ -471,9 +477,7 @@ public class DBApp {
                                     String[] strarrOperators) throws DBAppException, IOException, ClassNotFoundException {
 
 
-
-        //TODO validate the input
-
+        Validator.validateSelect(arrSQLTerms, strarrOperators);
 
         SelectionHandler selectionHandler = new SelectionHandler(arrSQLTerms[0]._strTableName);
         Stack<Object> operands = new Stack<>();
@@ -516,6 +520,7 @@ public class DBApp {
         if (result instanceof SQLTerm) result=selectionHandler.process((SQLTerm) result);
         return ((TreeSet<Tuple>)result).iterator();
     }
+
 
 
     public static void main(String[] args) {
