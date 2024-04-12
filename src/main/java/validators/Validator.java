@@ -51,7 +51,6 @@ public class Validator {
     }
 
     public static void validateIndexCreation(String strTableName,String strColName,String strIndexName) throws DBAppException, IOException {
-
             if(strTableName == null){
                 throw new DBAppException("Table name can't be null");
             }
@@ -60,12 +59,6 @@ public class Validator {
             }
             if(strIndexName == null){
                 throw new DBAppException("Index name can't be null");
-            }
-            if(!tableNameExist(strTableName)){
-                throw new DBAppException("Table doesn't exist");
-            }
-            if(indexNameExist(strTableName,strColName)){
-                throw new DBAppException("Column doesn't exist in table");
             }
     }
 
@@ -102,7 +95,21 @@ public class Validator {
         //TODO validate clustering key exists
     }
 
-    public static void validateDelete(){}
+    public static void validateDelete(String strTableName, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException {
+        if(strTableName == null){
+            throw new DBAppException("Table name can't be null");
+        }
+        if(htblColNameValue == null){
+            throw new DBAppException("Can't delete with no columns");
+        }
+        if(!tableNameExist(strTableName)){
+            throw new DBAppException("Table doesn't exist");
+        }
+        checkColNameValue(strTableName, htblColNameValue);
+        //TODO validate inserted table content is compatible with the desired table
+
+
+    }
 
     public static void validateSelect(SQLTerm[] arrSQLTerms,String[] strarrOperators) throws DBAppException, IOException {
         if(arrSQLTerms == null || strarrOperators == null){
@@ -148,8 +155,7 @@ public class Validator {
         return MetaDataManger.getInstance().exists(MetaDataColumns.TABLE_NAME, strTableName);
     }
     private static boolean indexNameExist(String strTableName,String strIndexName) throws IOException {
-//        return MetaDataManger.getInstance().exists(MetaDataColumns.INDEX_NAME, strIndexName);
-        return false;
+        return MetaDataManger.getInstance().exists(MetaDataColumns.INDEX_NAME, strIndexName);
     }
     private static boolean isValidType(String type){
         if(type.equals("java.lang.Integer") || type.equals("java.lang.Double") || type.equals("java.lang.String")) return true;
@@ -163,6 +169,20 @@ public class Validator {
     private static boolean isValidOperator(String operator){
         if(operator.equals("AND") || operator.equals("OR") || operator.equals("XOR")) return true;
         return false;
+    }
+
+    private static void checkColNameValue(String tableName, Hashtable<String,Object> htblColNameValue) throws IOException, DBAppException {
+        for(String colName : htblColNameValue.keySet()){
+            if(!MetaDataManger.getInstance().existsInTable(MetaDataColumns.COLUMN_NAME, colName, tableName)){
+                throw new DBAppException("Column: '"+colName+"' doesn't exist in table '"+tableName+"'");
+            }
+            else if(htblColNameValue.get(colName) == null){
+                throw new DBAppException("Column: '"+colName+"' value can't be null");
+            }
+            else if(!htblColNameValue.get(colName).getClass().getName().equals(MetaDataManger.getInstance().getColumnType(tableName, colName))){
+                throw new DBAppException("Column: '"+colName+"' value type doesn't match the column type in table '"+tableName+"'");
+            }
+        }
     }
 //    private static boolean isColumnExist(String tableName, String columnName) throws IOException {
 //        return MetaDataManger.getInstance().existsInTable(MetaDataColumns.COLUMN_NAME, columnName, tableName);
