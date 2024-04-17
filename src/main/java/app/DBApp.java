@@ -189,6 +189,7 @@ public class DBApp {
 
         while (targetPageInfo != null) {
             targetPage = Page.deserialize(targetPageInfo.getPageAddress());
+            Validator.validateClusteringKeyValue(targetPage,tuple,table.getClusteringKey(),targetPageInfo.getPageAddress());
             if (!targetPage.isFull()) break;
             tuple = insertIntoFullPage(table, targetPageInfo, targetPage, tuple ,columnNames,indices);
             targetPageInfo = table.getNextPageInfo(targetPageInfo);
@@ -272,6 +273,7 @@ public class DBApp {
         Page targetPage = Page.deserialize(pageInfo.getPageAddress());
 
         Tuple targetTuple = targetPage.getRecordBS(table.getClusteringKey(), castedValue);
+        if(targetTuple==null) return; //throw new DBAppException("There is no such tuple with the entered clustering key");
         Hashtable<String, Object> content = targetTuple.getContent();
 
         for (String key : htblColNameValue.keySet()) {
@@ -334,9 +336,7 @@ public class DBApp {
             }
             deleteWithoutIndex(htblColNameValue, strTableName, columnsWithIndex);
         } catch (Exception e) {
-            if (!e.getMessage().equals("Record not found")) {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
     }
 
