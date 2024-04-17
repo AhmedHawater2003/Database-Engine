@@ -11,6 +11,7 @@ import handlers.SelectionHandler;
 import helpers.ConfigReader;
 import helpers.MetaDataColumns;
 import helpers.MetaDataManger;
+import sql.SQLParser;
 import storage.Page;
 import storage.PageInfo;
 import storage.Table;
@@ -520,6 +521,11 @@ public class DBApp {
         if (result instanceof SQLTerm) result=selectionHandler.process((SQLTerm) result);
         return ((TreeSet<Tuple>)result).iterator();
     }
+    public Iterator parseSQL(StringBuffer strbufSQL) throws DBAppException {
+        SQLParser parser = new SQLParser(this);
+        Iterator result = parser.parse(strbufSQL);
+        return result;
+    }
 
 
 
@@ -529,14 +535,49 @@ public class DBApp {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 
-            Hashtable htblColNameType = new Hashtable( );
-            htblColNameType.put("id", "java.lang.Integer");
-            htblColNameType.put("name", "java.lang.String");
-            htblColNameType.put("gpa", "java.lang.double");
-            dbApp.createTable( strTableName, "id", htblColNameType );
+//            Hashtable htblColNameType = new Hashtable( );
+//            htblColNameType.put("id", "java.lang.Integer");
+//            htblColNameType.put("name", "java.lang.String");
+//            htblColNameType.put("gpa", "java.lang.Double");
+
+//            SQLParser parser = new SQLParser(dbApp);
+
+            ArrayList<StringBuffer> buff= new ArrayList<>();
+
+
+            String creteTable = "CREATE TABLE Student(id INT PRIMARY KEY,name VARCHAR,gpa double);";
+            String createIndex = "CREATE INDEX gpaIndex ON Student(gpa);";
+            String insert= "INSERT INTO Student (id,name,gpa) VALUES (10,'Abdo',0.95);";
+            String delete = "DELETE FROM Student WHERE id = 10;";
+            String update = "UPDATE Student SET gpa=0.9, name= 'Abdelrahman' WHERE id = 10;";
+            String select = "SELECT * FROM Student WHERE name <= 'John Noor' AND id=1;";
+            String insert2="INSERT INTO Student (id,name,gpa) VALUES (1,'Ahmed Khalid',1.0),(2,'Ali Gamal',2.0);";
+
+            StringBuffer stringBuffer1 = new StringBuffer();
+            StringBuffer stringBuffer2 = new StringBuffer();
+            StringBuffer stringBuffer3 = new StringBuffer();
+            StringBuffer stringBuffer4 = new StringBuffer();
+            StringBuffer stringBuffer5 = new StringBuffer();
+            StringBuffer stringBuffer6 = new StringBuffer();
+            StringBuffer stringBuffer7 = new StringBuffer();
+            stringBuffer1.append(creteTable);
+            stringBuffer2.append(createIndex);
+            stringBuffer3.append(insert2);
+            stringBuffer4.append(insert);
+            stringBuffer5.append(delete);
+            stringBuffer6.append(update);
+            stringBuffer7.append(select);
+
+            buff.add(stringBuffer1);
+            buff.add(stringBuffer2);
+//            for (StringBuffer b : buff) {
+//                dbApp.parseSQL(b);
+//            }
+//            dbApp.createTable( strTableName, "id", htblColNameType );
+//            for(StringBuffer b: buff)dbApp.parseSQL(b);
 //            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //
-            Hashtable htblColNameValue = new Hashtable();
+//            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 5 );
 //            htblColNameValue.put("name", "Ahmed Noor" );
 //            htblColNameValue.put("gpa",  0.95 );
@@ -549,9 +590,9 @@ public class DBApp {
 //            htblColNameValue.put("name", "Ahmed Noor");
 //            htblColNameValue.put("gpa",  0.95 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-
-
+//
+//
+////
 //            htblColNameValue.clear( );
 //            htblColNameValue.put("id", 5674567);
 //            htblColNameValue.put("name", "Dalia Noor");
@@ -579,15 +620,15 @@ public class DBApp {
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 
-//            SQLTerm[] arrSQLTerms;
-//            arrSQLTerms = new SQLTerm[6];
-//            for (int i = 0; i < 6; i++) {
-//                arrSQLTerms[i] = new app.SQLTerm();
-//            }
-//            arrSQLTerms[0]._strTableName = "Student";
-//            arrSQLTerms[0]._strColumnName = "name";
-//            arrSQLTerms[0]._strOperator = "<=";
-//            arrSQLTerms[0]._objValue = "John Noor";
+            SQLTerm[] arrSQLTerms;
+            arrSQLTerms = new SQLTerm[1];
+            for (int i = 0; i < 1; i++) {
+                arrSQLTerms[i] = new app.SQLTerm();
+            }
+            arrSQLTerms[0]._strTableName = "Student";
+            arrSQLTerms[0]._strColumnName = "name";
+            arrSQLTerms[0]._strOperator = "<=";
+            arrSQLTerms[0]._objValue = "John Noor";
 //
 ////            arrSQLTerms[1]._strTableName = "Student";
 ////            arrSQLTerms[1]._strColumnName = "gpa";
@@ -614,34 +655,47 @@ public class DBApp {
 ////            arrSQLTerms[5]._strOperator = ">";
 ////            arrSQLTerms[5]._objValue = 3;
 //
-//            String[] strarrOperators = new String[0];
-////            strarrOperators[0] = "OR";
-////            strarrOperators[1] = "AND";
-////            strarrOperators[2] = "AND";
-////            strarrOperators[3] = "AND";
-////            strarrOperators[4] = "XOR";
+            String[] strarrOperators = new String[0];
+//            strarrOperators[0] = "OR";
+//            strarrOperators[1] = "AND";
+//            strarrOperators[2] = "AND";
+//            strarrOperators[3] = "AND";
+//            strarrOperators[4] = "XOR";
 //
-//            // select * from Student where name = "John Noor" or gpa = 1.5;
-//            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-//            while (resultSet.hasNext()) {
-//                Tuple t = (Tuple) resultSet.next();
-//                System.out.println(t);
-//            }
+////            // select * from Student where name = "John Noor" or gpa = 1.5;
+//            dbApp.parseSQL(stringBuffer1);
+//            dbApp.parseSQL(stringBuffer2);
+//            dbApp.parseSQL(stringBuffer4);
+//            dbApp.parseSQL(stringBuffer3);
+            Iterator resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+            while (resultSet.hasNext()) {
+                Tuple t = (Tuple) resultSet.next();
+                System.out.println(t);
+            }
+
+            System.out.println("---------------------------------------------------");
 //
-//            System.out.println("---------------------------------------------------");
-//
+
+            resultSet=dbApp.parseSQL(stringBuffer7);
+            while (resultSet.hasNext()) {
+                Tuple t = (Tuple) resultSet.next();
+                System.out.println(t);
+            }
+            System.out.println("---------------------------------------------------");
 //
 //            htblColNameValue.clear();
 //            htblColNameValue.put("name", "Ashraf Mansour11");
-////            htblColNameValue.put("gpa", 8.0);
+//            htblColNameValue.put("gpa", 8.0);
+
 //            dbApp.updateTable("Student", "5674567", htblColNameValue);
-//
-//
-//            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
-//            while (resultSet.hasNext()) {
-//                Tuple t = (Tuple) resultSet.next();
-//                System.out.println(t);
-//            }
+//            for(StringBuffer b: buff)dbApp.parseSQL(b);
+           // dbApp.parseSQL(stringBuffer4);
+
+            resultSet = dbApp.selectFromTable(arrSQLTerms, strarrOperators);
+            while (resultSet.hasNext()) {
+                Tuple t = (Tuple) resultSet.next();
+                System.out.println(t);
+            }
         } catch (Exception exp) {
             exp.printStackTrace();
         }

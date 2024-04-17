@@ -81,6 +81,7 @@ public class Validator {
                 throw new DBAppException("Table doesn't exist");
             }
             //TODO validate inserted table content is compatible with the desired table
+            //TODO validate clustering key value repeated
     }
 
     public static void validateUpdate(String strTableName, String strClusteringKeyValue, Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException {
