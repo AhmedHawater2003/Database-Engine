@@ -111,6 +111,7 @@ public class DBApp {
 
             //create index
             int fanout = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
+//            String colType = MetaDataManger.getInstance().getColumnType(strTableName, strColName);
             bplustree index = new bplustree(fanout + 1);
             if (!myTable.isEmpty()) {
                 for (String pageAddress : myTable.getPagesAddresses()) {
@@ -135,6 +136,23 @@ public class DBApp {
         }
     }
 
+    private void adjustTupleInsertions(Hashtable<String,Object> htbColNameValue , String strTableName) throws IOException {
+        List<List<String>> columnNameType = MetaDataManger.getInstance().readTableInfo(strTableName, new MetaDataColumns[]{MetaDataColumns.COLUMN_NAME, MetaDataColumns.COLUMN_TYPE});
+        List<String> columnNames = columnNameType.get(0);
+        List<String> columnTypes = columnNameType.get(1);
+        for (int i = 0; i < columnTypes.size(); i++) {
+            if(columnTypes.get(i).equals("java.lang.Double")){
+                if(htbColNameValue.get(columnNames.get(i)) instanceof Integer){
+                    System.out.println(htbColNameValue.get(columnNames.get(i)));
+                    Double tmp = (Integer) htbColNameValue.get(columnNames.get(i)) + 0.0;
+                    htbColNameValue.put(columnNames.get(i),tmp);
+                    System.out.println(htbColNameValue.get(columnNames.get(i)));
+                }
+            }
+        }
+
+    }
+
     // following method inserts one row only.
     // htblColNameValue must include a value for the primary key
     public void insertIntoTable(String strTableName,
@@ -142,6 +160,7 @@ public class DBApp {
 
         // !TODO validate inserted table content is compatible with the desired table
         Validator.validateInsertion(strTableName, htblColNameValue);
+        adjustTupleInsertions(htblColNameValue,strTableName);
 
         List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
         ArrayList<bplustree> indices = new ArrayList<>();
@@ -501,55 +520,104 @@ public class DBApp {
         try {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
-
-            Hashtable htblColNameType = new Hashtable( );
-            htblColNameType.put("id", "java.lang.Integer");
-            htblColNameType.put("name", "java.lang.String");
-            htblColNameType.put("gpa", "java.lang.double");
+//
+//            Hashtable htblColNameType = new Hashtable( );
+//            htblColNameType.put("id", "java.lang.Integer");
+//            htblColNameType.put("name", "java.lang.String");
+//            htblColNameType.put("gpa", "java.lang.Double");
 //            dbApp.createTable( strTableName, "id", htblColNameType );
 //            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //            dbApp.createIndex( strTableName, "name", "nameIndex" );
 //            bplustree index = bplustree.deserialize("gpaIndex", "Student");
 //            System.out.println(index);
+//            htblColNameType.put("gpa", "java.lang.Double");
+//            dbApp.createTable( strTableName, "id", htblColNameType );
+//            dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //
 //            System.out.println(Page.deserialize("serialized/pages/Student0.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student1.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student2.class"));
-            Hashtable htblColNameValue = new Hashtable();
-//            htblColNameValue.put("id", 5 );
+//            Hashtable htblColNameValue = new Hashtable();
+//            htblColNameValue.put("id", 3 );
 //            htblColNameValue.put("name", "Ahmed Noor" );
 //            htblColNameValue.put("gpa",  0.95 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-            htblColNameValue.clear();
-            htblColNameValue.put("gpa", "0.95");
-            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 5 );
+//            htblColNameValue.put("name", "Ahmed Mohamed" );
+//            htblColNameValue.put("gpa",  0.7 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
-            bplustree index = bplustree.deserialize("gpaIndex", "Student");
-            System.out.println(index);
-            bplustree index2 = bplustree.deserialize("nameIndex", "Student");
-            System.out.println(index2);
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 1 );
+//            htblColNameValue.put("name", "Dalia Noor" );
+//            htblColNameValue.put("gpa",  1.95 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 6);
+//            htblColNameValue.put("name", "Dalia Mohamed" );
+//            htblColNameValue.put("gpa",  1 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 2 );
+//            htblColNameValue.put("name", "Ali Noor" );
+//            htblColNameValue.put("gpa",  0.95 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 4 );
+//            htblColNameValue.put("name", "Ali Mohamed" );
+//            htblColNameValue.put("gpa",  3 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 7 );
+//            htblColNameValue.put("name", "Omar Mohamed" );
+//            htblColNameValue.put("gpa",  3.4 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//
+
+//            System.out.println(returnColumnTypes("Student","gpa"));
+//
+
+//            htblColNameValue.clear();
+//            htblColNameValue.put("gpa", "0.95");
+//            dbApp.deleteFromTable(strTableName, htblColNameValue);
+////
+//            bplustree index = bplustree.deserialize("gpaIndex", "Student");
+//            System.out.println(index);
+//            bplustree index2 = bplustree.deserialize("nameIndex", "Student");
+//            System.out.println(index2);
 //
 //            System.out.println(Page.deserialize("serialized/pages/Student0.class"));
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 4 );
-//            htblColNameValue.put("name", "Ahmed Noor");
-//            htblColNameValue.put("gpa",  0.95 );
+//            htblColNameValue.put("id", 5 );
+//            htblColNameValue.put("name", "Dalia Mohamed");
+//            htblColNameValue.put("gpa",  3.5 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 
 
 //            htblColNameValue.clear( );
-//            htblColNameValue.put("id", 5674567);
-//            htblColNameValue.put("name", "Dalia Noor");
-//            htblColNameValue.put("gpa",  1.25);
+//            htblColNameValue.put("id", 6);
+//            htblColNameValue.put("name", "Ali Mohamed");
+//            htblColNameValue.put("gpa",  1.0);
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
-//            var page = Page.deserialize("serialized/pages/Student0.class");
-//            var index = bplustree.deserialize("nameIndex", "Student");
+            var page = Page.deserialize("serialized/pages/Student0.class");
+            System.out.println(page);
+            page = Page.deserialize("serialized/pages/Student1.class");
+            System.out.println(page);
+            page = Page.deserialize("serialized/pages/Student2.class");
+            System.out.println(page);
+            page = Page.deserialize("serialized/pages/Student3.class");
+            System.out.println(page);
+            System.out.println("---------------------------------------------------");
+
+            var index = bplustree.deserialize("gpaIndex", "Student");
 //            System.out.println(page);
-//            System.out.println("---------------------------------------------------");
-//            System.out.println(index);
+            System.out.println(index);
 
 //            dbApp.createIndex("Student", "name", "nameIndex");
 //
