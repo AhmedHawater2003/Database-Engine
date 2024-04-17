@@ -135,5 +135,16 @@ public String getColumnType(String tableName, String columnName) throws IOExcept
         return columnType;
     }
 
-
+    public int getColumnsCount(String tableName) throws IOException {
+        CSVReader csvReader = getCSVReader();
+        String[] nextRecord;
+        int columnsCount = 0;
+        while ((nextRecord = csvReader.readNext()) != null) {
+            if (nextRecord[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName)) {
+                columnsCount++;
+            }
+        }
+        csvReader.close();
+        return columnsCount;
+    }
 }

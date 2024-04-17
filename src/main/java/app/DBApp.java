@@ -56,13 +56,17 @@ public class DBApp {
     // type as value
     public void createTable(String strTableName,
                             String strClusteringKeyColumn,
-                            Hashtable<String, String> htblColNameType) throws DBAppException, IOException {
+                            Hashtable<String, String> htblColNameType) throws DBAppException {
 
+        try {
+            Validator.validateTableCreation(strTableName, strClusteringKeyColumn, htblColNameType);
 
-        Validator.validateTableCreation(strTableName, strClusteringKeyColumn, htblColNameType);
-
-        Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
-        table.serialize();
+            Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
+            table.serialize();
+        }
+        catch (Exception e) {
+            throw new DBAppException(e.getMessage());
+        }
     }
 
 
@@ -132,7 +136,8 @@ public class DBApp {
             }
             index.serialize(strIndexName, strTableName);
         } catch (Exception e) {
-            e.printStackTrace();
+             throw new DBAppException(e.getMessage());
+//            e.printStackTrace();
         }
     }
 
@@ -143,10 +148,8 @@ public class DBApp {
         for (int i = 0; i < columnTypes.size(); i++) {
             if(columnTypes.get(i).equals("java.lang.Double")){
                 if(htbColNameValue.get(columnNames.get(i)) instanceof Integer){
-                    System.out.println(htbColNameValue.get(columnNames.get(i)));
                     Double tmp = (Integer) htbColNameValue.get(columnNames.get(i)) + 0.0;
                     htbColNameValue.put(columnNames.get(i),tmp);
-                    System.out.println(htbColNameValue.get(columnNames.get(i)));
                 }
             }
         }
@@ -159,8 +162,9 @@ public class DBApp {
                                 Hashtable<String, Object> htblColNameValue) throws DBAppException, IOException, ClassNotFoundException {
 
         // !TODO validate inserted table content is compatible with the desired table
-        Validator.validateInsertion(strTableName, htblColNameValue);
+
         adjustTupleInsertions(htblColNameValue,strTableName);
+        Validator.validateInsertion(strTableName, htblColNameValue);
 
         List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
         ArrayList<bplustree> indices = new ArrayList<>();
@@ -172,6 +176,8 @@ public class DBApp {
 
         Table table = Table.deserialize(strTableName);
         Tuple tuple = new Tuple(htblColNameValue, table.getClusteringKey());
+        //validation of clustering key value
+
 
         if (table.isEmpty()) {
             Page newPage = table.createNewPage(tuple.getClusteringKeyValue());
@@ -247,6 +253,12 @@ public class DBApp {
 
         Validator.validateUpdate(strTableName, strClusteringKeyValue, htblColNameValue);
         Table table = Table.deserialize(strTableName);
+        if(table.isEmpty()){
+            return;  //throw new DBAppException("Table is empty");
+        }
+        if(htblColNameValue.containsKey(table.getClusteringKey())) {
+            throw new DBAppException("Clustering key must NOT be in the columns list");
+        }
 
         HashMap<String, String> columnWithIndex = new HashMap<>();
         List<List<String>> indexList = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
@@ -302,6 +314,10 @@ public class DBApp {
     public void deleteFromTable(String strTableName, Hashtable<String, Object> htblColNameValue) throws DBAppException {
         try {
             Validator.validateDelete(strTableName, htblColNameValue);
+            Table table = Table.deserialize(strTableName);
+            if(table.isEmpty()){
+                return; //throw new DBAppException("Table is empty");
+            }
             List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
             List<String> indexNames = columnsWithIndex.get(1);
             List<String> columnNames = columnsWithIndex.get(0);
@@ -521,7 +537,7 @@ public class DBApp {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 //
-//            Hashtable htblColNameType = new Hashtable( );
+            Hashtable htblColNameType = new Hashtable( );
 //            htblColNameType.put("id", "java.lang.Integer");
 //            htblColNameType.put("name", "java.lang.String");
 //            htblColNameType.put("gpa", "java.lang.Double");
@@ -537,10 +553,10 @@ public class DBApp {
 //            System.out.println(Page.deserialize("serialized/pages/Student0.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student1.class"));
 //            System.out.println(Page.deserialize("serialized/pages/Student2.class"));
-//            Hashtable htblColNameValue = new Hashtable();
+            Hashtable htblColNameValue = new Hashtable();
 //            htblColNameValue.put("id", 3 );
-//            htblColNameValue.put("name", "Ahmed Noor" );
-//            htblColNameValue.put("gpa",  0.95 );
+//            htblColNameValue.put("name", "khaled ahmed" );
+//            htblColNameValue.put("gpa" , 0.76);
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 5 );
@@ -575,16 +591,21 @@ public class DBApp {
 //            htblColNameValue.put("name", "Omar Mohamed" );
 //            htblColNameValue.put("gpa",  3.4 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-//
+//            htblColNameValue.clear();
+//            htblColNameValue.put("id", 5 );
+//            htblColNameValue.put("name", "Ahmed Mohamed" );
+//            htblColNameValue.put("gpa",  0.7 );
+//            dbApp.insertIntoTable( strTableName , htblColNameValue );
+
 //
 
 //            System.out.println(returnColumnTypes("Student","gpa"));
 //
 
-//            htblColNameValue.clear();
-//            htblColNameValue.put("gpa", "0.95");
-//            dbApp.deleteFromTable(strTableName, htblColNameValue);
-////
+            htblColNameValue.clear();
+            htblColNameValue.put("id", 5);
+            dbApp.deleteFromTable(strTableName, htblColNameValue);
+//////
 //            bplustree index = bplustree.deserialize("gpaIndex", "Student");
 //            System.out.println(index);
 //            bplustree index2 = bplustree.deserialize("nameIndex", "Student");
@@ -598,26 +619,28 @@ public class DBApp {
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 
-
+//
 //            htblColNameValue.clear( );
-//            htblColNameValue.put("id", 6);
+//            htblColNameValue.put("id", 5);
 //            htblColNameValue.put("name", "Ali Mohamed");
 //            htblColNameValue.put("gpa",  1.0);
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
-            var page = Page.deserialize("serialized/pages/Student0.class");
-            System.out.println(page);
-            page = Page.deserialize("serialized/pages/Student1.class");
-            System.out.println(page);
-            page = Page.deserialize("serialized/pages/Student2.class");
-            System.out.println(page);
-            page = Page.deserialize("serialized/pages/Student3.class");
-            System.out.println(page);
-            System.out.println("---------------------------------------------------");
-
-            var index = bplustree.deserialize("gpaIndex", "Student");
+//            var page = Page.deserialize("serialized/pages/Student0.class");
 //            System.out.println(page);
-            System.out.println(index);
+//            page = Page.deserialize("serialized/pages/Student1.class");
+//            System.out.println(page);
+//            page = Page.deserialize("serialized/pages/Student2.class");
+//            System.out.println(page);
+//            page = Page.deserialize("serialized/pages/Student3.class");
+//            System.out.println(page);
+//            page = Page.deserialize("serialized/pages/Student4.class");
+//            System.out.println(page);
+//            System.out.println("---------------------------------------------------");
+//
+//            var index = bplustree.deserialize("gpaIndex", "Student");
+//            System.out.println(page);
+//            System.out.println(index);
 
 //            dbApp.createIndex("Student", "name", "nameIndex");
 //

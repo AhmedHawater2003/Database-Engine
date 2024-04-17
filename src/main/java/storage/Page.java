@@ -64,7 +64,7 @@ public class Page implements Serializable {
         temp.put(clustringKeyName, key);
         Tuple dummy = new Tuple(temp,clustringKeyName);
         int idx=Collections.binarySearch(records, dummy);
-        if(idx<0) throw new DBAppException("Record not found");
+        if(idx<0) return null; // throw new DBAppException("Record not found");
         return records.get(idx);
     }
 
