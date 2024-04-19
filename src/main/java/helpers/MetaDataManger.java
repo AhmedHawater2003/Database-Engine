@@ -121,5 +121,30 @@ public class MetaDataManger {
         return exists;
     }
 
+public String getColumnType(String tableName, String columnName) throws IOException {
+        CSVReader csvReader = getCSVReader();
+        String[] nextRecord;
+        String columnType = null;
+        while ((nextRecord = csvReader.readNext()) != null) {
+            if (nextRecord[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName) && nextRecord[MetaDataColumns.COLUMN_NAME.ordinal()].equals(columnName)) {
+                columnType = nextRecord[MetaDataColumns.COLUMN_TYPE.ordinal()];
+                break;
+            }
+        }
+        csvReader.close();
+        return columnType;
+    }
 
+    public int getColumnsCount(String tableName) throws IOException {
+        CSVReader csvReader = getCSVReader();
+        String[] nextRecord;
+        int columnsCount = 0;
+        while ((nextRecord = csvReader.readNext()) != null) {
+            if (nextRecord[MetaDataColumns.TABLE_NAME.ordinal()].equals(tableName)) {
+                columnsCount++;
+            }
+        }
+        csvReader.close();
+        return columnsCount;
+    }
 }

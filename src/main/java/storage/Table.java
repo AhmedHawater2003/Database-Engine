@@ -109,4 +109,8 @@ public class Table implements Serializable {
         pagesInfo.remove(new PageInfo(pageAddress, minKey));
     }
 
+    public void setPagesInfo(TreeSet<PageInfo> pagesInfo) {
+        this.pagesInfo = pagesInfo;
+    }
+
 }
