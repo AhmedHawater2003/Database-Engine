@@ -184,6 +184,7 @@ public class RecordsFetcher {
         TreeSet<Tuple> result = new TreeSet<>();
         //TODO : validate the table name & sqlTerm parameters
         Table table = (Table) Table.deserialize(sqlTerm._strTableName);
+        if(table.isEmpty())return result;
         String operator = sqlTerm._strOperator;
 
         switch (operator){

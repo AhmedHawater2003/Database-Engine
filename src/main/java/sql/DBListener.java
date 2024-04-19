@@ -3,6 +3,8 @@ package sql;
 import app.DBApp;
 import app.SQLTerm;
 import exceptions.DBAppException;
+import helpers.MetaDataManger;
+import org.antlr.v4.runtime.tree.ErrorNode;
 import sql.antlrGenFiles.*;
 
 import java.io.IOException;
@@ -93,8 +95,14 @@ public class DBListener extends SQLiteParserBaseListener {
             colNames.add(col.getText());
 
 
-        for (int i = 0; i < primaryKeyValueIdx; i++)
-            colVal.put(colNames.get(i), parseObject(ctx.expr(i).getText()));
+        for (int i = 0; i < primaryKeyValueIdx; i++) {
+            try {
+                colVal.put(colNames.get(i), parseFromMetaDataType(tableName, colNames.get(i), ctx.expr(i).getText()));
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        //parseObject(ctx.expr(i).getText())
         //TODO: use CSVReader to get the column type
 
         try{
@@ -120,8 +128,9 @@ public class DBListener extends SQLiteParserBaseListener {
 
             for(int j=0;j<ctx.column_name().size();j++){
                 String colName = ctx.column_name(j).getText();
+                if((ctx.values_clause().value_row(i).expr(j)!=null)){
                 Object colValue = parseObject(ctx.values_clause().value_row(i).expr(j).getText());
-                colNameValue.put(colName,colValue);
+                colNameValue.put(colName,colValue);}
             }
 
             try {
@@ -141,13 +150,20 @@ public class DBListener extends SQLiteParserBaseListener {
         Hashtable<String, Object> colVal = new Hashtable<>();
 
         ArrayList<SQLiteParser.ExprContext> conditions = new ArrayList<>();
-        parseCondition(conditions, ctx.expr());
+        if(ctx != null && ctx.expr() != null){
+            parseCondition(conditions, ctx.expr());
 
-        for (SQLiteParser.ExprContext cond : conditions) {
-            String col = cond.expr(0).getText();
-            //TODO: use CSVReader to get the column type
-            Object val = parseObject(cond.expr(1).getText());
-            colVal.put(col, val);
+            for (SQLiteParser.ExprContext cond : conditions) {
+                String col = cond.expr(0).getText();
+                Object val = null;
+                //TODO: use CSVReader to get the column type
+                try {
+                    val = parseFromMetaDataType(tableName, col, cond.expr(1).getText());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                colVal.put(col, val);
+            }
         }
 
         try {
@@ -251,7 +267,12 @@ public class DBListener extends SQLiteParserBaseListener {
             String colName = conditions.get(i).expr(0).getText();
             Object value = cleanString(conditions.get(i).expr(1).getText());
             //TODO: use CSVReader to get the column type
-            value=parseObject(value.toString());
+//            value=parseObject(value.toString());
+            try {
+                value = parseFromMetaDataType(tableName, colName, value.toString());
+            }catch (Exception e) {
+                e.printStackTrace();
+            }
             String strOperator = chooseInSqlOperator(conditions.get(i));
             terms[i] = new SQLTerm(tableName, colName, strOperator, value);
         }
@@ -288,6 +309,23 @@ public class DBListener extends SQLiteParserBaseListener {
     }
 
 
+    private Object parseFromMetaDataType(String tableName,String columnName, String value) throws IOException {
+
+        String type=MetaDataManger.getInstance().getColumnType(tableName,columnName);
+        if(type.equals(INTEGER_DATA_TYPE_NAME))
+            return Integer.parseInt(value);
+        else if(type.equals(DOUBLE_DATA_TYPE_NAME))
+            return Double.parseDouble(value);
+        return cleanString(value);
+    }
+    public void visitErrorNode(ErrorNode errorNode) {
+        try {
+            throw new DBAppException("Error in sql");
+        } catch (DBAppException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 
 
 }
