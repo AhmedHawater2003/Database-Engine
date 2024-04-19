@@ -317,8 +317,26 @@ public class DBApp {
         try {
             Validator.validateDelete(strTableName, htblColNameValue);
             Table table = Table.deserialize(strTableName);
+            if(htblColNameValue==null || htblColNameValue.isEmpty()){
+                ArrayList<String> pageAddresses = table.getPagesAddresses();
+                for(String pageAddress : pageAddresses){
+                    File file = new File(pageAddress);
+                    file.delete();
+                }
+                TreeSet<PageInfo> pagesInfo = new TreeSet<>();
+                table.setPagesInfo(pagesInfo);
+                List<String> indices = MetaDataManger.getInstance().getColumnsWithIndex(strTableName).get(1);
+                for(String indexName : indices){
+                    File file = new File("serialized/indices/"+strTableName+"_"+indexName+".class");
+                    file.delete();
+                    bplustree index = new bplustree(ConfigReader.getInstance().readInteger("MaximumRowsCountinPage")+1);
+                    index.serialize(indexName,strTableName);
+                }
+                table.serialize();
+                return;
+            }
             if(table.isEmpty()){
-                return; //throw new DBAppException("Table is empty");
+                return;
             }
             List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
             List<String> indexNames = columnsWithIndex.get(1);
@@ -329,18 +347,18 @@ public class DBApp {
                     bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)), strTableName);
                     String indexName = indexNames.remove(columnNames.indexOf(colName));
                     columnNamesClone.remove(colName);
-                    deleteWithIndex(htblColNameValue, index, indexNames, colName, columnNamesClone, strTableName);
+                    deleteWithIndex(htblColNameValue, index, indexNames, colName, columnNamesClone, table);
                     index.serialize(indexName, strTableName);
                     return;
                 }
             }
-            deleteWithoutIndex(htblColNameValue, strTableName, columnsWithIndex);
+            deleteWithoutIndex(htblColNameValue, table, columnsWithIndex);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void deleteWithIndex(Hashtable<String, Object> htblColNameValue, bplustree index,List<String> indexNames, String colName, List<String> columnNames,String tableName) throws IOException, ClassNotFoundException {
+    private void deleteWithIndex(Hashtable<String, Object> htblColNameValue, bplustree index,List<String> indexNames, String colName, List<String> columnNames,Table table) throws IOException, ClassNotFoundException {
         ArrayList<bplustree> indices = new ArrayList<>();
         boolean deserializeFlag = false;
         Comparable minKey = null;
@@ -363,7 +381,7 @@ public class DBApp {
                         page.delete(tuple);
                         if (!deserializeFlag) {
                             for (String indexName : indexNames) {
-                                indices.add(bplustree.deserialize(indexName, tableName));
+                                indices.add(bplustree.deserialize(indexName, table.getTableName()));
                             }
                             indices.add(index);
                             columnNames.add(colName);
@@ -374,7 +392,6 @@ public class DBApp {
                         if (tuple.equals(temp) && !page.getRecords().isEmpty()) {
                             Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
                             Comparable oldMinKey = temp.getClusteringKeyValue();
-                            Table table = Table.deserialize(tableName);
                             table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
                             table.serialize();
                         }
@@ -387,22 +404,20 @@ public class DBApp {
                     File file = new File(pageAddress);
                     file.delete();
                     //Deleting page from the table object
-                    Table table = Table.deserialize(tableName);
                     table.deletePage(pageAddress, minKey);
                     table.serialize();
                 }
             }
             for (int i = 0; i < indices.size() - 1; i++) {
-                indices.get(i).serialize(indexNames.get(i), tableName);
+                indices.get(i).serialize(indexNames.get(i), table.getTableName());
             }
         }
     }
 
-    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, String tableName,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
-        Table table = Table.deserialize(tableName);
+    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, Table table,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
         ArrayList<bplustree> indices = new ArrayList<>();
         for (String indexName : columnsWithIndex.get(1)) {
-            indices.add(bplustree.deserialize(indexName, tableName));
+            indices.add(bplustree.deserialize(indexName, table.getTableName()));
         }
         if (htblColNameValue.containsKey(table.getClusteringKey())) {
             PageInfo targetPageInfo = table.getTargetPageInfo((Comparable) htblColNameValue.get(table.getClusteringKey()));
@@ -476,7 +491,7 @@ public class DBApp {
             }
         }
         for (int i = 0; i < indices.size(); i++) {
-            indices.get(i).serialize(columnsWithIndex.get(1).get(i), tableName);
+            indices.get(i).serialize(columnsWithIndex.get(1).get(i), table.getTableName());
         }
         table.serialize();
     }
@@ -537,7 +552,7 @@ public class DBApp {
             String strTableName = "Student";
             DBApp dbApp = new DBApp();
 //
-            Hashtable htblColNameType = new Hashtable( );
+//            Hashtable htblColNameType = new Hashtable( );
 //            htblColNameType.put("id", "java.lang.Integer");
 //            htblColNameType.put("name", "java.lang.String");
 //            htblColNameType.put("gpa", "java.lang.Double");
@@ -603,9 +618,12 @@ public class DBApp {
 //
 
             htblColNameValue.clear();
-            htblColNameValue.put("id", 5);
-            dbApp.deleteFromTable(strTableName, htblColNameValue);
-//////
+//            htblColNameValue.put("id", 5);
+            dbApp.deleteFromTable(strTableName, null);
+            Table table = Table.deserialize(strTableName);
+            System.out.println(table.getPagesAddresses());
+            System.out.println(table.isEmpty());
+
 //            bplustree index = bplustree.deserialize("gpaIndex", "Student");
 //            System.out.println(index);
 //            bplustree index2 = bplustree.deserialize("nameIndex", "Student");
@@ -628,7 +646,7 @@ public class DBApp {
 
 //            var page = Page.deserialize("serialized/pages/Student0.class");
 //            System.out.println(page);
-//            page = Page.deserialize("serialized/pages/Student1.class");
+//            var page = Page.deserialize("serialized/pages/Student1.class");
 //            System.out.println(page);
 //            page = Page.deserialize("serialized/pages/Student2.class");
 //            System.out.println(page);

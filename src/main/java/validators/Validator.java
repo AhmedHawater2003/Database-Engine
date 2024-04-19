@@ -137,14 +137,13 @@ public class Validator {
         if (strTableName == null) {
             throw new DBAppException("Table name can't be null");
         }
-        if (htblColNameValue == null) {
-            throw new DBAppException("Can't delete with no columns");
-        }
+
         if (!tableNameExist(strTableName)) {
             throw new DBAppException("Table doesn't exist");
         }
-        checkColNameValue(strTableName, htblColNameValue, false);
-
+        if(htblColNameValue!=null) {
+            checkColNameValue(strTableName, htblColNameValue, false);
+        }
 
     }
 
@@ -247,7 +246,7 @@ public class Validator {
         }
 
         for (String colName : htblColNameValue.keySet()) {
-            if (colNameType.containsKey(colName)) {
+            if (!colNameType.containsKey(colName)) {
                 throw new DBAppException("Column: '" + colName + "' doesn't exist in table '" + tableName + "'");
             } else if (htblColNameValue.get(colName) == null) {
                 throw new DBAppException("Column: '" + colName + "' value can't be null");
