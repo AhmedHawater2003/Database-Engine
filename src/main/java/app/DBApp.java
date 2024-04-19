@@ -6,6 +6,7 @@ package app;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import exceptions.DBAppException;
+import handlers.DeletionHandler;
 import handlers.SQLOperator;
 import handlers.SelectionHandler;
 import helpers.ConfigReader;
@@ -153,7 +154,6 @@ public class DBApp {
                 }
             }
         }
-
     }
 
     // following method inserts one row only.
@@ -203,6 +203,7 @@ public class DBApp {
 
         insertIntoIndices(indices,columnNames,tuple,targetPageInfo.getPageAddress());
         targetPage.insert(tuple);
+        table.updatePageInfoMinKey(targetPageInfo, tuple.getClusteringKeyValue());
         targetPage.serialize(targetPageInfo.getPageAddress());
         table.serialize();
         for(int i=0;i<indices.size();i++){
@@ -315,185 +316,21 @@ public class DBApp {
     // htblColNameValue enteries are ANDED together
     public void deleteFromTable(String strTableName, Hashtable<String, Object> htblColNameValue) throws DBAppException {
         try {
+            adjustTupleInsertions(htblColNameValue,strTableName);
             Validator.validateDelete(strTableName, htblColNameValue);
             Table table = Table.deserialize(strTableName);
+            DeletionHandler deletionHandler = new DeletionHandler(table);
             if(htblColNameValue==null || htblColNameValue.isEmpty()){
-                ArrayList<String> pageAddresses = table.getPagesAddresses();
-                for(String pageAddress : pageAddresses){
-                    File file = new File(pageAddress);
-                    file.delete();
-                }
-                TreeSet<PageInfo> pagesInfo = new TreeSet<>();
-                table.setPagesInfo(pagesInfo);
-                List<String> indices = MetaDataManger.getInstance().getColumnsWithIndex(strTableName).get(1);
-                for(String indexName : indices){
-                    File file = new File("serialized/indices/"+strTableName+"_"+indexName+".class");
-                    file.delete();
-                    bplustree index = new bplustree(ConfigReader.getInstance().readInteger("MaximumRowsCountinPage")+1);
-                    index.serialize(indexName,strTableName);
-                }
-                table.serialize();
+                deletionHandler.deleteAll();
                 return;
             }
             if(table.isEmpty()){
                 return;
             }
-            List<List<String>> columnsWithIndex = MetaDataManger.getInstance().getColumnsWithIndex(strTableName);
-            List<String> indexNames = columnsWithIndex.get(1);
-            List<String> columnNames = columnsWithIndex.get(0);
-            List<String> columnNamesClone = new ArrayList<>(columnNames);
-            for (String colName : columnNames) {
-                if (htblColNameValue.containsKey(colName)) {
-                    bplustree index = bplustree.deserialize(indexNames.get(columnNames.indexOf(colName)), strTableName);
-                    String indexName = indexNames.remove(columnNames.indexOf(colName));
-                    columnNamesClone.remove(colName);
-                    deleteWithIndex(htblColNameValue, index, indexNames, colName, columnNamesClone, table);
-                    index.serialize(indexName, strTableName);
-                    return;
-                }
-            }
-            deleteWithoutIndex(htblColNameValue, table, columnsWithIndex);
+            deletionHandler.delete(htblColNameValue);
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private void deleteWithIndex(Hashtable<String, Object> htblColNameValue, bplustree index,List<String> indexNames, String colName, List<String> columnNames,Table table) throws IOException, ClassNotFoundException {
-        ArrayList<bplustree> indices = new ArrayList<>();
-        boolean deserializeFlag = false;
-        Comparable minKey = null;
-        HashMap<String,Integer> map = index.search((Comparable) htblColNameValue.get(colName));
-        if(map!=null){
-            HashMap<String, Integer> tempMap = (HashMap<String, Integer>) map.clone();
-            for (String pageAddress : tempMap.keySet()) {
-                Page page = Page.deserialize(pageAddress);
-                Vector<Tuple> records = (Vector<Tuple>) page.getRecords().clone();
-                for (Tuple tuple : records) {
-                    boolean satisfied = true;
-                    for (String column : htblColNameValue.keySet()) {
-                        if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
-                            satisfied = false;
-                            break;
-                        }
-                    }
-                    if (satisfied) {
-                        Tuple temp = page.getRecords().firstElement();
-                        page.delete(tuple);
-                        if (!deserializeFlag) {
-                            for (String indexName : indexNames) {
-                                indices.add(bplustree.deserialize(indexName, table.getTableName()));
-                            }
-                            indices.add(index);
-                            columnNames.add(colName);
-                            deserializeFlag = true;
-                        }
-                        deleteFromIndices(indices, columnNames, tuple, pageAddress);
-                        minKey = tuple.getClusteringKeyValue();
-                        if (tuple.equals(temp) && !page.getRecords().isEmpty()) {
-                            Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
-                            Comparable oldMinKey = temp.getClusteringKeyValue();
-                            table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
-                            table.serialize();
-                        }
-                    }
-                }
-                if (!page.isEmpty())
-                    page.serialize(pageAddress);
-                else {
-                    //To delete page from disk
-                    File file = new File(pageAddress);
-                    file.delete();
-                    //Deleting page from the table object
-                    table.deletePage(pageAddress, minKey);
-                    table.serialize();
-                }
-            }
-            for (int i = 0; i < indices.size() - 1; i++) {
-                indices.get(i).serialize(indexNames.get(i), table.getTableName());
-            }
-        }
-    }
-
-    private void deleteWithoutIndex(Hashtable<String, Object> htblColNameValue, Table table,List<List<String>> columnsWithIndex) throws IOException, ClassNotFoundException, DBAppException {
-        ArrayList<bplustree> indices = new ArrayList<>();
-        for (String indexName : columnsWithIndex.get(1)) {
-            indices.add(bplustree.deserialize(indexName, table.getTableName()));
-        }
-        if (htblColNameValue.containsKey(table.getClusteringKey())) {
-            PageInfo targetPageInfo = table.getTargetPageInfo((Comparable) htblColNameValue.get(table.getClusteringKey()));
-            if (targetPageInfo != null) {
-                boolean satisfied = true;
-                Page targetPage = Page.deserialize(targetPageInfo.getPageAddress());
-                Tuple temp = targetPage.getRecords().firstElement();
-//                List<Tuple> tempRecords = (Vector<Tuple>) targetPage.getRecords().clone();
-                Tuple tuple = targetPage.getRecordBS(table.getClusteringKey(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
-                for (String column : htblColNameValue.keySet()) {
-                    if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
-                        satisfied = false;
-                        break;
-                    }
-                }
-                if (satisfied) {
-                    targetPage.delete(tuple);
-                    deleteFromIndices(indices, columnsWithIndex.get(0), tuple, targetPageInfo.getPageAddress());
-                    if (tuple.equals(temp) && !targetPage.isEmpty()) {
-                        Comparable newMinKey = targetPage.getRecords().firstElement().getClusteringKeyValue();
-                        table.updatePageInfoMinKey(targetPageInfo.getPageAddress(),targetPageInfo.getMinKey(), newMinKey);
-
-                    }
-                }
-                if (!targetPage.isEmpty())
-                    targetPage.serialize(targetPageInfo.getPageAddress());
-                else {
-                    //To delete page from disk
-                    File file = new File(targetPageInfo.getPageAddress());
-                    file.delete();
-                    //Deleting page from the table object
-                    table.deletePage(targetPageInfo.getPageAddress(), (Comparable) htblColNameValue.get(table.getClusteringKey()));
-                }
-
-            }
-        }
-        else {
-            ArrayList<String> pageAddresses = table.getPagesAddresses();
-            for (String pageAddress : pageAddresses) {
-                Page page = Page.deserialize(pageAddress);
-                Vector<Tuple> records = (Vector<Tuple>) page.getRecords().clone();
-                Comparable oldMinKey = null;
-                for (Tuple tuple : records) {
-                    boolean satisfied = true;
-                    for (String column : htblColNameValue.keySet()) {
-                        if (!tuple.getContent().get(column).equals(htblColNameValue.get(column))) {
-                            satisfied = false;
-                            break;
-                        }
-                    }
-                    if (satisfied) {
-                        Tuple temp = page.getRecords().firstElement();
-                        page.delete(tuple);
-                        oldMinKey = tuple.getClusteringKeyValue();
-                        deleteFromIndices(indices, columnsWithIndex.get(0), tuple, pageAddress);
-                        if (tuple.equals(temp) && !page.isEmpty()) {
-                            Comparable newMinKey = page.getRecords().firstElement().getClusteringKeyValue();
-                            table.updatePageInfoMinKey(pageAddress, oldMinKey, newMinKey);
-                        }
-                    }
-                }
-                if (!page.isEmpty())
-                    page.serialize(pageAddress);
-                else {
-                    //To delete page from disk
-                    File file = new File(pageAddress);
-                    file.delete();
-                    //Deleting page from the table object
-                    table.deletePage(pageAddress, oldMinKey);
-                }
-            }
-        }
-        for (int i = 0; i < indices.size(); i++) {
-            indices.get(i).serialize(columnsWithIndex.get(1).get(i), table.getTableName());
-        }
-        table.serialize();
     }
 
     public Iterator selectFromTable(SQLTerm[] arrSQLTerms,
@@ -600,36 +437,42 @@ public class DBApp {
 //            htblColNameValue.put("name", "Ali Mohamed" );
 //            htblColNameValue.put("gpa",  3 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
-//
+////
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 7 );
 //            htblColNameValue.put("name", "Omar Mohamed" );
 //            htblColNameValue.put("gpa",  3.4 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 //            htblColNameValue.clear();
-//            htblColNameValue.put("id", 5 );
+//            htblColNameValue.put("id", 8 );
 //            htblColNameValue.put("name", "Ahmed Mohamed" );
 //            htblColNameValue.put("gpa",  0.7 );
 //            dbApp.insertIntoTable( strTableName , htblColNameValue );
 
+//            Table table = Table.deserialize(strTableName);
 //
-
+//            System.out.println(table.getPagesAddresses());
 //            System.out.println(returnColumnTypes("Student","gpa"));
 //
+//            Page page = Page.deserialize("serialized/pages/Student11.class");
+//            System.out.println(page);
+//            htblColNameValue.clear();
+            htblColNameValue.put("gpa", 1);
+            dbApp.deleteFromTable("strTableName", htblColNameValue);
 
-            htblColNameValue.clear();
-//            htblColNameValue.put("id", 5);
-            dbApp.deleteFromTable(strTableName, null);
-            Table table = Table.deserialize(strTableName);
-            System.out.println(table.getPagesAddresses());
-            System.out.println(table.isEmpty());
+
+//             table = Table.deserialize(strTableName);
+//
+//             System.out.println(bplustree.deserialize("gpaIndex", "Student"));
+//            System.out.println(table.getPagesAddresses());
+//            System.out.println(table.isEmpty());
 
 //            bplustree index = bplustree.deserialize("gpaIndex", "Student");
 //            System.out.println(index);
 //            bplustree index2 = bplustree.deserialize("nameIndex", "Student");
 //            System.out.println(index2);
 //
-//            System.out.println(Page.deserialize("serialized/pages/Student0.class"));
+
 //            htblColNameValue.clear();
 //            htblColNameValue.put("id", 5 );
 //            htblColNameValue.put("name", "Dalia Mohamed");

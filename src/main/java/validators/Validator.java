@@ -109,7 +109,7 @@ public class Validator {
 //
     public static void validateClusteringKeyValue(Page page, Tuple tuple, String clusteringName, String pageAddress) throws DBAppException, IOException {
         if (page.getRecordBS(clusteringName, tuple.getClusteringKeyValue()) != null) {
-            page.serialize(pageAddress);
+//            page.serialize(pageAddress);
             throw new DBAppException("Duplicate entry '" + tuple.getClusteringKeyValue() + "' for key " + clusteringName);
         }
     }
@@ -164,7 +164,7 @@ public class Validator {
         }
 
         for (int i = 0 ; i<arrSQLTerms.length; i++)
-            validateSQLTerm(arrSQLTerms[i]);
+            validateSQLTerm(arrSQLTerms[i],colNameType);
         for (String operator : strarrOperators) {
             if (!isValidOperator(operator)) {
                 throw new DBAppException("Invalid operator");
@@ -173,7 +173,7 @@ public class Validator {
         //TODO validate the input(no null, no empty strings, operators=terms-1)
     }
 
-    public static void validateSQLTerm(SQLTerm term) throws DBAppException, IOException {
+    public static void validateSQLTerm(SQLTerm term,HashMap<String,String> colNameType) throws DBAppException, IOException {
         if (term._strTableName == null) {
             throw new DBAppException("Table name can't be null");
         }
@@ -193,6 +193,7 @@ public class Validator {
             throw new DBAppException("Table doesn't exist");
         }
 
+// !TODO move adjusting the value outside the validator
         String colType = MetaDataManger.getInstance().getColumnType(term._strTableName, term._strColumnName);
         if (colType.equals("java.lang.Double")) {
             if (term._objValue instanceof Integer) {
@@ -200,17 +201,16 @@ public class Validator {
                 term._objValue = tmp;
             }
         }
-        if (!MetaDataManger.getInstance().existsInTable(MetaDataColumns.COLUMN_NAME, term._strColumnName, term._strTableName)) {
+
+        if (!colNameType.containsKey(term._strColumnName)) {
             throw new DBAppException("Column: '" + term._strColumnName + "' doesn't exist in table '" + term._strTableName + "'");
         } else if (term._objValue == null) {
             throw new DBAppException("Column: '" + term._strColumnName + "' value can't be null");
-        } else if (!term._objValue.getClass().getName().equals(MetaDataManger.getInstance().getColumnType(term._strTableName, term._strColumnName))) {
+        } else if (!term._objValue.getClass().getName().equals(colNameType.get(term._strColumnName))) {
             throw new DBAppException("Column: '" + term._strColumnName + "' value type doesn't match the column type in table '" + term._strTableName + "'");
         }
-        //TODO: check if column exists in table
 
     }
-
 
     private static boolean tableNameExist(String strTableName) throws IOException {
         return MetaDataManger.getInstance().exists(MetaDataColumns.TABLE_NAME, strTableName);
@@ -261,14 +261,6 @@ public class Validator {
         }
     }
 }
-//    private static boolean isColumnExist(String tableName, String columnName) throws IOException {
-//        return MetaDataManger.getInstance().existsInTable(MetaDataColumns.COLUMN_NAME, columnName, tableName);
-//    }
-//    private static boolean isColumnCompatibleWithTable(String tableName, String columnName, Object value) throws IOException{
-//
-//
-//
-//    }
 
 
 
