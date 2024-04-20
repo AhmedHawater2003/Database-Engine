@@ -1,6 +1,7 @@
 package sql;
 
 import app.DBApp;
+import app.GUI;
 import app.SQLTerm;
 import exceptions.DBAppException;
 import helpers.MetaDataManger;
@@ -49,8 +50,11 @@ public class DBListener extends SQLiteParserBaseListener {
 
         try {
             app.createTable(tableName,clusteringKey,colNameType);
-        } catch (Exception e) {
+        } catch (DBAppException | IOException e) {
             e.printStackTrace();
+            if(GUI.dbApp!=null){
+                GUI.textArea.appendText("\nError: "+e.getMessage());
+            }
         }
 
         result=null;
@@ -79,6 +83,9 @@ public class DBListener extends SQLiteParserBaseListener {
             app.createIndex(tableName,colName,indexName);
         } catch (Exception e) {
             e.printStackTrace();
+            if(GUI.dbApp!=null){
+                GUI.textArea.appendText("\n Error:"+e.getMessage());
+            }
         }
     }
 
@@ -100,6 +107,9 @@ public class DBListener extends SQLiteParserBaseListener {
                 colVal.put(colNames.get(i), parseFromMetaDataType(tableName, colNames.get(i), ctx.expr(i).getText()));
             }catch (Exception e) {
                 e.printStackTrace();
+                if(GUI.dbApp!=null){
+                    GUI.textArea.appendText("\n Error:"+e.getMessage());
+                }
             }
         }
         //parseObject(ctx.expr(i).getText())
@@ -109,6 +119,9 @@ public class DBListener extends SQLiteParserBaseListener {
             app.updateTable(tableName,primaryKeyValue,colVal);
         } catch (Exception e) {
             e.printStackTrace();
+            if(GUI.dbApp!=null){
+                GUI.textArea.appendText("\n Error:"+e.getMessage());
+            }
         }
         result = null;
     }
@@ -137,6 +150,9 @@ public class DBListener extends SQLiteParserBaseListener {
                 app.insertIntoTable(tableName,colNameValue);
             } catch (Exception e) {
                 e.printStackTrace();
+                if(GUI.dbApp!=null){
+                    GUI.textArea.appendText("\n Error:"+e.getMessage());
+                }
             }
 
         }
