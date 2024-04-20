@@ -14,6 +14,7 @@ public class RecordsFetcher {
         bplustree index = bplustree.deserialize(indexName,sqlTerm._strTableName);
         String operator = sqlTerm._strOperator;
         TreeSet <Tuple> result = new TreeSet<>();
+
         switch (operator){
             case "=":
                 result = fetchEqual(sqlTerm,index); break;
@@ -59,7 +60,8 @@ public class RecordsFetcher {
             PageInfo pageInfo = table.getTargetPageInfo((Comparable) sqlTerm._objValue);
             if(pageInfo != null) {
                 Page page = Page.deserialize(pageInfo.getPageAddress());
-                result.add(page.getRecordBS(table.getClusteringKey(), (Comparable) sqlTerm._objValue));
+                Tuple record = page.getRecordBS(table.getClusteringKey(), (Comparable) sqlTerm._objValue);
+                if(record != null) result.add(record);
                 page.serialize(pageInfo.getPageAddress());
             }
             return result;
@@ -199,7 +201,7 @@ public class RecordsFetcher {
             case "<=":
                 result = fetchLessThan(sqlTerm,table,true); break;
             case "!=":
-                result = fetchNotEqual(sqlTerm,table);
+                result = fetchNotEqual(sqlTerm,table);break;
         }
 
         table.serialize();
