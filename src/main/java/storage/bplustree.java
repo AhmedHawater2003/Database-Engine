@@ -1,9 +1,10 @@
 package storage;
 
+import java.io.*;
 import java.lang.*;
 import java.util.*;
 
-public class bplustree {
+public class bplustree implements Serializable {
 	int m;
 	InternalNode root;
 	LeafNode firstLeaf;
@@ -14,6 +15,20 @@ public class bplustree {
 
 	/*~~~~~~~~~~~~~~~~ HELPER FUNCTIONS ~~~~~~~~~~~~~~~~*/
 
+
+	public String toString(){
+		String result = "";
+		LeafNode currNode = this.firstLeaf;
+		while (currNode != null) {
+			DictionaryPair dps[] = currNode.dictionary;
+			for (DictionaryPair dp : dps) {
+				if (dp == null) { break; }
+				result+=dp.key+" : "+dp.value+"\n";
+			}
+			currNode = currNode.rightSibling;
+		}
+		return result;
+	}
 	/**
 	 * This method performs a standard binary search on a sorted
 	 * DictionaryPair[] and returns the index of the dictionary pair
@@ -33,7 +48,7 @@ public class bplustree {
 				return o1.compareTo(o2);
 			}
 		};
-		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, new HashSet<String>()), c);
+		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, new HashMap<String,Integer>()), c);
 	}
 
 	/**
@@ -299,7 +314,7 @@ public class bplustree {
 	 */
 	private DictionaryPair[] splitDictionary(LeafNode ln, int split) {
 
-		DictionaryPair[] dictionary = ln.dictionary;
+		DictionaryPair[] dictionary = ln.dictionary.clone();
 
 		/* Initialize two dictionaries that each hold half of the original
 		   dictionary values */
@@ -547,6 +562,19 @@ public class bplustree {
 		}
 	}
 
+	public void deleteFromPage(Comparable key ,String pageName){
+		HashMap<String,Integer> map = this.search(key); // TODO handle if map is null ( key does not exists )
+		if(map.get(pageName)==1){
+			map.remove(pageName);
+			if(map.isEmpty()){
+				this.delete(key);
+			}
+		}
+		else{
+			map.put(pageName,map.get(pageName)-1);
+		}
+	}
+
 	/**
 	 * Given an integer key and floating point value, this method inserts a
 	 * dictionary pair accordingly into the B+ tree.
@@ -555,43 +583,45 @@ public class bplustree {
 	 */
 	public void insert(Comparable key, String value){
 
-
+		HashMap<String,Integer> map;
 		if (isEmpty()) {
 			max = key;
 			min = key;
 			/* Flow of execution goes here only when first insert takes place */
 
 			// Create leaf node as first node in B plus tree (root is null)
-			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key, new HashSet<String>(){{
-																					add(value);
-			}}));
+			map = new HashMap<String,Integer>();
+			map.put(value,1);
+			LeafNode ln = new LeafNode(this.m, new DictionaryPair(key,map));
 
 			// Set as first leaf node (can be used later for in-order leaf traversal)
 			this.firstLeaf = ln;
 
-		} else {
+		} else if((map = this.search(key))!=null){
+
+			map.put(value,map.getOrDefault(value,0)+1);
+		}
+		else{
 			if(key.compareTo(max)>0)
 				max=key;
 			if(key.compareTo(min)<0)
 				min=key;
-			HashSet<String> temp = this.search(key);
-			if(temp!=null) {
-				temp.add(value);
-				return;
-			}
+//			HashSet<String> temp = this.search(key);
+//			if(temp!=null) {
+//				temp.add(value);
+//				return;
+//			}
 			// Find leaf node to insert into
 			LeafNode ln = (this.root == null) ? this.firstLeaf :
 												findLeafNode(key);
 
 			// Insert into leaf node fails if node becomes overfull
-			if (!ln.insert(new DictionaryPair(key, new HashSet<String>(){{
-				add(value);
-			}}))) {
+			map = new HashMap<String,Integer>();
+			map.put(value,1);
+			if (!ln.insert(new DictionaryPair(key, map))) {
 
 				// Sort all the dictionary pairs with the included pair to be inserted
-				ln.dictionary[ln.numPairs] = new DictionaryPair(key, new HashSet<String>(){{
-					add(value);
-				}});
+				ln.dictionary[ln.numPairs] = new DictionaryPair(key, map);
 				ln.numPairs++;
 				sortDictionary(ln.dictionary);
 
@@ -664,7 +694,7 @@ public class bplustree {
 	 * @param key: the key to be searched within the B+ tree
 	 * @return the floating point value associated with the key within the B+ tree
 	 */
-	public HashSet<String> search(Comparable key) {
+	public HashMap<String, Integer> search(Comparable key) {
 
 		// If B+ tree is completely empty, simply return null
 		if (isEmpty()) { return null; }
@@ -693,10 +723,10 @@ public class bplustree {
 	 * @return an ArrayList<Double> that holds all values of dictionary pairs
 	 * whose keys are within the specified range
 	 */
-	public ArrayList<HashSet<String>> search(Comparable lowerBound, Comparable upperBound,boolean lowerBoundInclusive,boolean upperBoundInclusive ) {
+	public ArrayList<HashMap<String,Integer>> search(Comparable lowerBound, Comparable upperBound,boolean lowerBoundInclusive,boolean upperBoundInclusive ) {
 
 		// Instantiate Double array to hold values
-		ArrayList<HashSet<String>> values = new ArrayList<HashSet<String>>();
+		ArrayList<HashMap<String,Integer>> values = new ArrayList<HashMap<String,Integer>>();
 
 		// Iterate through the doubly linked list of leaves
 		LeafNode currNode = this.firstLeaf;
@@ -729,12 +759,53 @@ public class bplustree {
 
 		return values;
 	}
-	public  ArrayList<HashSet<String>> searchGreaterThan(Comparable lowerBound, boolean inclusive){
+	public  ArrayList<HashMap<String,Integer>> searchGreaterThan(Comparable lowerBound, boolean inclusive){
 		return search(lowerBound,max,inclusive,true);
 	}
 
-	public  ArrayList<HashSet<String>> searchLessThan(Comparable upperBound, boolean inclusive){
+	public  ArrayList<HashMap<String,Integer>> searchLessThan(Comparable upperBound, boolean inclusive){
 		return search(min,upperBound,true,inclusive);
+	}
+
+	public void serialize(String indexName, String tableName){
+
+		try {
+			// Create an output stream for the file where the object will be stored
+			FileOutputStream fileOut = new FileOutputStream("serialized/Indices/"+tableName+"_"+indexName+".class");
+			ObjectOutputStream out = new ObjectOutputStream(fileOut);
+
+			// Write the mySambosa object to the output stream
+			out.writeObject(this);
+
+			// Close the output stream
+			out.close();
+			fileOut.close();
+
+
+		} catch (Exception i) {
+			i.printStackTrace();
+		}
+	}
+	public static bplustree deserialize(String indexName, String tableName){
+		bplustree e = null;
+		try {
+			// Create a new file input stream for the specified file
+			FileInputStream fileIn = new FileInputStream("serialized/Indices/"+tableName+"_"+indexName+".class");
+
+			// Create a new object input stream for the file
+			ObjectInputStream in = new ObjectInputStream(fileIn);
+
+			// Read the serialized object from the object input stream and cast it as a mySambosa object
+			e = (bplustree) in.readObject();
+
+			// Close the input stream
+			in.close();
+			fileIn.close();
+
+		} catch (Exception i) {
+			i.printStackTrace();
+		}
+		return e;
 	}
 
 	/**
@@ -750,7 +821,7 @@ public class bplustree {
 	 * This class represents a general node within the B+ tree and serves as a
 	 * superclass of InternalNode and LeafNode.
 	 */
-	public class Node {
+	public class Node implements Serializable {
 		InternalNode parent;
 	}
 
@@ -759,7 +830,7 @@ public class bplustree {
 	 * all search/insert/delete operations. An internal node only holds keys; it
 	 * does not hold dictionary pairs.
 	 */
-	private class InternalNode extends Node {
+	private class InternalNode extends Node implements Serializable {
 		int maxDegree;
 		int minDegree;
 		int degree;
@@ -922,6 +993,14 @@ public class bplustree {
 			this.keys = keys;
 			this.childPointers = pointers;
 		}
+
+		public String toString(){
+			String s = "";
+			for(int i = 0; i<degree;i++){
+				s+=keys[i]+" ";
+			}
+			return s;
+		}
 	}
 
 	/**
@@ -930,7 +1009,7 @@ public class bplustree {
 	 * minimum and maximum number of dictionary pairs it can hold, as specified
 	 * by m, the max degree of the B+ tree. The leaf nodes form a doubly linked
 	 * list that, i.e. each leaf node has a left and right sibling*/
-	public class LeafNode extends Node {
+	public class LeafNode extends Node implements Serializable {
 		int maxNumPairs;
 		int minNumPairs;
 		int numPairs;
@@ -946,10 +1025,15 @@ public class bplustree {
 		public void delete(int index) {
 
 			// Delete dictionary pair from leaf
-			this.dictionary[index] = null;
+			// DANGER ! Fuck original implementation
+//			this.dictionary[index] = null;
 
+			for(int i = index; i<numPairs-1;i++){
+				this.dictionary[i] = this.dictionary[i+1];
+			}
 			// Decrement numPairs
 			numPairs--;
+			this.dictionary[numPairs] = null;
 		}
 
 		/**
@@ -1041,6 +1125,14 @@ public class bplustree {
 			this.numPairs = linearNullSearch(dps);
 			this.parent = parent;
 		}
+
+		public String toString(){
+			String s = "";
+			for(int i = 0; i<numPairs;i++){
+				s+=dictionary[i].key+" ";
+			}
+			return s;
+		}
 	}
 
 	/**
@@ -1048,16 +1140,16 @@ public class bplustree {
 	 * leaf nodes of the B+ tree. The class implements the Comparable interface
 	 * so that the DictionaryPair objects can be sorted later on.
 	 */
-	public class DictionaryPair implements Comparable<DictionaryPair> {
+	public class DictionaryPair implements Comparable<DictionaryPair>, Serializable {
 		Comparable key;
-		HashSet<String> value;
+		HashMap<String,Integer> value;
 
 		/**
 		 * Constructor
 		 * @param key: the key of the key-value pair
 		 * @param value: the value of the key-value pair
 		 */
-		public DictionaryPair(Comparable key, HashSet<String> value) {
+		public DictionaryPair(Comparable key, HashMap<String,Integer> value) {
 			this.key = key;
 			this.value = value;
 		}
@@ -1079,6 +1171,8 @@ public class bplustree {
 			else if (i>0) { return 1; }
 			else { return -1; }
 		}
+
+
 	}
 
 	public static void main(String[] args) {
@@ -1091,7 +1185,7 @@ public class bplustree {
 
 		// Read from file
 
-		try {
+
 
 //			// Prepare to read input file
 //			File file = new File(System.getProperty("user.dir") + "/" + fileName);
@@ -1109,10 +1203,11 @@ public class bplustree {
 			bpt.insert("0108","31.907");
 			bpt.insert("5608","3.26");
 			bpt.insert("0234","121.56");
+			bpt.insert("0234","121.56");
 			bpt.insert("4325","-109.23");
 			bpt.delete("0108");
 			bpt.insert("0234","blabizo");
-			HashSet<String> temp = bpt.search("0234");
+			HashMap<String,Integer> temp = bpt.search("0234");
 			bpt.insert("0102","39.56");
 			bpt.insert("0065","-3.95");
 			bpt.delete("0102");
@@ -1123,7 +1218,7 @@ public class bplustree {
 			bpt.insert("0032","0.02");
 			bpt.insert("0220","3.55");
 			bpt.delete("0234");
-			HashSet<String> temp3=bpt.search("0065");
+			HashMap<String,Integer> temp3=bpt.search("0065");
 			System.out.print("blalf");
 
 //			// Perform an operation for each line in the input file
@@ -1197,9 +1292,7 @@ public class bplustree {
 //			// Close output file
 //			logger.close();
 
-		} catch (Exception e) {
-			System.err.println(e);
-		}
+
 	}
 
 }

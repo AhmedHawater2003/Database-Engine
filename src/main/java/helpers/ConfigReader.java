@@ -3,11 +3,10 @@ package helpers;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
+
 public class ConfigReader {
-
-    private Properties prop = new Properties();
-    private static ConfigReader instance;
-
+    private static final ConfigReader INSTANCE = new ConfigReader();
+    private final Properties prop = new Properties();
 
     private ConfigReader() {
         try {
@@ -18,8 +17,9 @@ public class ConfigReader {
     }
 
     public static ConfigReader getInstance() {
-        return instance;
+        return INSTANCE;
     }
+
     public int readInteger(String propertyName) {
         return Integer.parseInt(prop.getProperty(propertyName));
     }
