@@ -9,25 +9,28 @@ import storage.Tuple;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.TreeSet;
 import java.util.List;
-import java.util.TreeSet;
 
 public class SelectionHandler {
     private String tableName;
-    private List<String> indexColumns;
+    private HashMap<String, String> columnWithIndex;
 
     public SelectionHandler(String tableName) throws IOException {
         this.tableName = tableName;
-        this.indexColumns = MetaDataManger.getInstance().
-                readTableInfo(tableName, new MetaDataColumns[]{MetaDataColumns.INDEX_NAME},
-                        strings -> !strings[MetaDataColumns.INDEX_NAME.ordinal()].equals("null"), false).get(0);
+        this.columnWithIndex = new HashMap<>();
+        List<List<String>> indexList = MetaDataManger.getInstance().getColumnsWithIndex(tableName);
+        for (int i = 0; i < indexList.get(0).size(); i++) {
+            this.columnWithIndex.put(indexList.get(0).get(i), indexList.get(1).get(i));
+        }
     }
 
-    public TreeSet<Tuple> process(SQLTerm term) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> process(SQLTerm term) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
-        if (indexColumns.contains(term._strColumnName))
-            result = RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName);
+
+        if (columnWithIndex.containsKey(term._strColumnName))
+            result = RecordsFetcher.fetchWithIndex(term,columnWithIndex.get(term._strColumnName) );
         else
             result = RecordsFetcher.fetchWithoutIndex(term);
         return result;
@@ -42,6 +45,7 @@ public class SelectionHandler {
         } else if (operator == SQLOperator.XOR) {
             result = processXOR(operands);
         }
+        //TODO: else throw exception
         return result;
     }
 
@@ -50,14 +54,14 @@ public class SelectionHandler {
         if (operands.size() == 0) throw new DBAppException("AND operator should have at least one operand");
         SQLTerm termWithIndex = null;
         for (SQLTerm term : operands) {
-            if (indexColumns.contains(term._strColumnName)) {
+            if (columnWithIndex.containsKey(term._strColumnName)) {
                 termWithIndex = term;
                 break;
             }
         }
         //TODO: index naming convention missing
         if (termWithIndex != null)
-            result = RecordsFetcher.fetchWithIndex(termWithIndex, tableName + "_" + termWithIndex._strColumnName);
+            result = RecordsFetcher.fetchWithIndex(termWithIndex,columnWithIndex.get(termWithIndex._strColumnName) );
         else result = RecordsFetcher.fetchWithoutIndex(operands.get(0));
 
         for(int i = 1; i < operands.size(); i++){
@@ -104,12 +108,12 @@ public class SelectionHandler {
         return false;
     }
 
-    public TreeSet<Tuple> processOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> processOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {
-                if (indexColumns.contains(term._strColumnName))
-                    result.addAll(RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName));
+                if (columnWithIndex.containsKey(term._strColumnName))
+                    result.addAll(RecordsFetcher.fetchWithIndex(term,columnWithIndex.get(term._strColumnName)));
                 else
                     result.addAll(RecordsFetcher.fetchWithoutIndex(term));
             } else result.addAll((TreeSet<Tuple>) operand);
@@ -117,12 +121,12 @@ public class SelectionHandler {
         return result;
     }
 
-    public TreeSet<Tuple> processXOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException {
+    public TreeSet<Tuple> processXOR(ArrayList<Object> operands) throws IOException, ClassNotFoundException, DBAppException {
         TreeSet<Tuple> result = new TreeSet<>();
         for (Object operand : operands) {
             if (operand instanceof SQLTerm term) {
-                if (indexColumns.contains(term._strColumnName)) {
-                    XORHelper(result, RecordsFetcher.fetchWithIndex(term, tableName + "_" + term._strColumnName));
+                if (columnWithIndex.containsKey(term._strColumnName)) {
+                    XORHelper(result, RecordsFetcher.fetchWithIndex(term,columnWithIndex.get(term._strColumnName)));
                 } else
                     XORHelper(result, RecordsFetcher.fetchWithoutIndex(term));
             } else XORHelper(result, (TreeSet<Tuple>) operand);

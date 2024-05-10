@@ -21,7 +21,7 @@ public class Table implements Serializable {
 
     private void initTableMetaData(Hashtable<String, String> colNameType) throws IOException {
 
-        var rows = new ArrayList<String[]>();
+        var rows = MetaDataManger.getInstance().readAll();
         rows.add(new String[]{getTableName(), getClusteringKey(), colNameType.get(getClusteringKey()), "True", "null", "null"});
         for (String colName : colNameType.keySet()) {
             if (colName.equals(getClusteringKey())) continue;
@@ -73,7 +73,8 @@ public class Table implements Serializable {
         pagesInfo.add(new PageInfo(oldPageInfo.getPageAddress(), newMinKey));
     }
     public void updatePageInfoMinKey(String pageAddress , Comparable oldMinKey, Comparable newMinKey) {
-        updatePageInfoMinKey(new PageInfo(pageAddress, oldMinKey), newMinKey);
+        pagesInfo.remove(new PageInfo(pageAddress, oldMinKey));
+        pagesInfo.add(new PageInfo(pageAddress, newMinKey));
     }
 
     public boolean isEmpty() {
@@ -106,6 +107,10 @@ public class Table implements Serializable {
     }
     public void deletePage(String pageAddress, Comparable minKey) {
         pagesInfo.remove(new PageInfo(pageAddress, minKey));
+    }
+
+    public void setPagesInfo(TreeSet<PageInfo> pagesInfo) {
+        this.pagesInfo = pagesInfo;
     }
 
 }

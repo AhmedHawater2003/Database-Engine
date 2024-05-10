@@ -10,8 +10,8 @@ import exceptions.DBAppException;
 
 public class Page implements Serializable {
 
-//    private final int maxNumberOfRecords = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
-    private final int maxNumberOfRecords = 1;
+    private final int maxNumberOfRecords = ConfigReader.getInstance().readInteger("MaximumRowsCountinPage");
+//    private final int maxNumberOfRecords = 1;
     public Vector<Tuple> getRecords() {
         return records;
     }
@@ -64,7 +64,7 @@ public class Page implements Serializable {
         temp.put(clustringKeyName, key);
         Tuple dummy = new Tuple(temp,clustringKeyName);
         int idx=Collections.binarySearch(records, dummy);
-        if(idx<0) throw new DBAppException("Record not found");
+        if(idx<0) return null; // throw new DBAppException("Record not found");
         return records.get(idx);
     }
 
@@ -83,5 +83,8 @@ public class Page implements Serializable {
         fileIn.close();
         return page;
     }
+
+
+
 
 }
